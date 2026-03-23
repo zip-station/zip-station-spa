@@ -48,7 +48,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     setLoading(true)
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
+      await createUserWithEmailAndPassword(auth.current, email, password)
       setStep('company')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : ''
@@ -63,7 +63,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     setLoading(true)
 
     try {
-      const result = await signInWithPopup(auth, googleProvider)
+      const result = await signInWithPopup(auth.current, googleProvider.current)
       setDisplayName(result.user.displayName || '')
       setEmail(result.user.email || '')
       setStep('company')
@@ -81,7 +81,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     setLoading(true)
 
     try {
-      const firebaseUser = auth.currentUser
+      const firebaseUser = auth.current.currentUser
       if (!firebaseUser) {
         setError('No authenticated user. Please go back and sign in.')
         setLoading(false)

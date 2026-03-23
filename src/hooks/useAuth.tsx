@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth.current, async (firebaseUser) => {
       setUser(firebaseUser)
 
       if (firebaseUser) {
@@ -44,19 +44,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithEmail = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password)
+    await signInWithEmailAndPassword(auth.current, email, password)
   }
 
   const signUpWithEmail = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password)
+    await createUserWithEmailAndPassword(auth.current, email, password)
   }
 
   const signInWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider)
+    await signInWithPopup(auth.current, googleProvider.current)
   }
 
   const signOut = async () => {
-    await firebaseSignOut(auth)
+    await firebaseSignOut(auth.current)
   }
 
   return (

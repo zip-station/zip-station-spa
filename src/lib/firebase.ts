@@ -9,28 +9,27 @@ let _googleProvider: GoogleAuthProvider | null = null
 function ensureInitialized() {
   if (!_app) {
     const config = getConfig()
-    const firebaseConfig = {
+    _app = initializeApp({
       apiKey: config.firebaseApiKey,
       authDomain: config.firebaseAuthDomain,
       projectId: config.firebaseProjectId,
-    }
-    _app = initializeApp(firebaseConfig)
+    })
     _auth = getAuth(_app)
     _googleProvider = new GoogleAuthProvider()
   }
 }
 
-// These getters are accessed after loadConfig() completes in main.tsx
-export const auth = new Proxy({} as Auth, {
-  get(_, prop) {
+// Lazy getters — safe to call after loadConfig() completes
+export const auth = {
+  get current(): Auth {
     ensureInitialized()
-    return (_auth as never)[prop]
-  },
-})
+    return _auth!
+  }
+}
 
-export const googleProvider = new Proxy({} as GoogleAuthProvider, {
-  get(_, prop) {
+export const googleProvider = {
+  get current(): GoogleAuthProvider {
     ensureInitialized()
-    return (_googleProvider as never)[prop]
-  },
-})
+    return _googleProvider!
+  }
+}
