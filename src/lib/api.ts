@@ -1,19 +1,19 @@
 import { getConfig } from './config'
 
-const API_BASE_URL = (() => {
+function getApiBaseUrl(): string {
   try { return getConfig().apiUrl } catch { return import.meta.env.VITE_API_URL || 'http://localhost:5100' }
-})()
+}
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>
 }
 
 class ApiClient {
-  private baseUrl: string
+  private getBaseUrl: () => string
   private getToken: (() => Promise<string | null>) | null = null
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl
+  constructor(getBaseUrl: () => string) {
+    this.getBaseUrl = getBaseUrl
   }
 
   setTokenProvider(provider: () => Promise<string | null>) {
@@ -23,7 +23,7 @@ class ApiClient {
   private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const { params, ...fetchOptions } = options
 
-    let url = `${this.baseUrl}${path}`
+    let url = `${this.getBaseUrl()}${path}`
     if (params) {
       const searchParams = new URLSearchParams(params)
       url += `?${searchParams.toString()}`
@@ -85,4 +85,4 @@ export class ApiError extends Error {
   }
 }
 
-export const api = new ApiClient(API_BASE_URL)
+export const api = new ApiClient(getApiBaseUrl)
