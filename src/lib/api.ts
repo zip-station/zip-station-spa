@@ -1,4 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5100'
+import { getConfig } from './config'
+
+const API_BASE_URL = (() => {
+  try { return getConfig().apiUrl } catch { return import.meta.env.VITE_API_URL || 'http://localhost:5100' }
+})()
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>
