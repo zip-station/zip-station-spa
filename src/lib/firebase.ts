@@ -1,18 +1,36 @@
-import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { initializeApp, type FirebaseApp } from 'firebase/app'
+import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth'
 import { getConfig } from './config'
 
-const config = (() => {
-  try { return getConfig() } catch { return null }
-})()
+let _app: FirebaseApp | null = null
+let _auth: Auth | null = null
+let _googleProvider: GoogleAuthProvider | null = null
 
-const firebaseConfig = {
-  apiKey: config?.firebaseApiKey || import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: config?.firebaseAuthDomain || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: config?.firebaseProjectId || import.meta.env.VITE_FIREBASE_PROJECT_ID,
+function ensureInitialized() {
+  if (!_app) {
+    const config = getConfig()
+    const firebaseConfig = {
+      apiKey: config.firebaseApiKey,
+      authDomain: config.firebaseAuthDomain,
+      projectId: config.firebaseProjectId,
+    }
+    _app = initializeApp(firebaseConfig)
+    _auth = getAuth(_app)
+    _googleProvider = new GoogleAuthProvider()
+  }
 }
 
-const app = initializeApp(firebaseConfig)
+// These getters are accessed after loadConfig() completes in main.tsx
+export const auth = new Proxy({} as Auth, {
+  get(_, prop) {
+    ensureInitialized()
+    return (_auth as never)[prop]
+  },
+})
 
-export const auth = getAuth(app)
-export const googleProvider = new GoogleAuthProvider()
+export const googleProvider = new Proxy({} as GoogleAuthProvider, {
+  get(_, prop) {
+    ensureInitialized()
+    return (_googleProvider as never)[prop]
+  },
+})
