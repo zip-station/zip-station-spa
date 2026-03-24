@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Copy, Plus, Tag, X } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -418,13 +418,6 @@ export function TicketDetailPage() {
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-bold tracking-tight">{ticket.subject}</h2>
               <span className="text-sm text-muted-foreground">#{ticket.ticketNumber}</span>
-              <button
-                onClick={() => { navigator.clipboard.writeText(window.location.href); }}
-                className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent"
-                title="Copy ticket link"
-              >
-                <Copy className="h-4 w-4" />
-              </button>
               {activeViewers.length > 0 && (
                 <div className="flex items-center gap-1 ml-2">
                   {activeViewers.map((v) => (
