@@ -228,6 +228,16 @@ export function TicketDetailPage() {
       setEditorKey((k) => k + 1)
       deleteDraft()
       setDraftStatus('idle')
+      // Poll for send status update (email sends in background on the server)
+      const pollSendStatus = () => {
+        let attempts = 0
+        const interval = setInterval(() => {
+          attempts++
+          queryClient.invalidateQueries({ queryKey: ['ticket', companyId, ticketId] })
+          if (attempts >= 10) clearInterval(interval) // stop after ~30s
+        }, 3000)
+      }
+      pollSendStatus()
     },
   })
 
