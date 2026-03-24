@@ -189,6 +189,7 @@ export function TicketDetailPage() {
     queryKey: ['ticket', companyId, ticketId],
     queryFn: () => api.get<TicketDetailData>(`/api/v1/companies/${companyId}/tickets/${ticketId}`),
     enabled: !!companyId && !!ticketId,
+    refetchOnMount: 'always',
   })
 
   const projectId = data?.ticket?.projectId
