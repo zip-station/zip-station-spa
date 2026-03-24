@@ -52,6 +52,83 @@ interface TicketDetailData {
   messages: TicketMessageResponse[]
 }
 
+/** Split HTML content into new content and quoted reply content */
+function splitQuotedHtml(html: string): { newContent: string; quotedContent: string | null } {
+  // Strategy 1: Known wrapper classes/IDs — try all patterns, pick earliest split
+  const wrapperPatterns = [
+    /^([\s\S]*?)(<div\s+id="appendonsend"[\s\S]*)$/i,           // Outlook appendonsend
+    /^([\s\S]*?)(<hr[^>]*style="[^"]*display:\s*inline-block[\s\S]*)$/i, // Outlook horizontal rule
+    /^([\s\S]*?)(<div\s+id="divRplyFwdMsg"[\s\S]*)$/i,          // Outlook divRplyFwdMsg
+    /^([\s\S]*?)(<div\s+class="[^"]*(?:gmail_quote|x_gmail_quote)[^"]*"[\s\S]*)$/i, // Gmail
+    /^([\s\S]*?)(<div\s+class="[^"]*yahoo_quoted[^"]*"[\s\S]*)$/i, // Yahoo
+  ]
+  let bestMatch: { newContent: string; quotedContent: string } | null = null
+  for (const pattern of wrapperPatterns) {
+    const match = html.match(pattern)
+    if (match && match[1].length > 0 && (!bestMatch || match[1].length < bestMatch.newContent.length)) {
+      bestMatch = { newContent: match[1], quotedContent: match[2] }
+    }
+  }
+  if (bestMatch) return bestMatch
+
+  // Strategy 2: Find "On ... wrote:" in the raw HTML text and split there
+  // Search for the pattern, allowing HTML tags before "On"
+  const onWroteIdx = html.search(/(?:>|^)\s*On\s[^<]{10,300}\swrote:/i)
+  if (onWroteIdx > 0) {
+    // Find the start of the containing element (back up to the nearest < before this point)
+    let splitIdx = onWroteIdx
+    const tagStart = html.lastIndexOf('<', onWroteIdx)
+    if (tagStart >= 0 && tagStart > onWroteIdx - 50) splitIdx = tagStart
+    return { newContent: html.slice(0, splitIdx), quotedContent: html.slice(splitIdx) }
+  }
+
+  // Strategy 3: Blockquote (last resort — very common)
+  const blockquoteIdx = html.search(/<blockquote/i)
+  if (blockquoteIdx > 0) {
+    // Back up to include any "On ... wrote:" text before the blockquote
+    const beforeBlockquote = html.slice(0, blockquoteIdx)
+    const onWroteBefore = beforeBlockquote.search(/On\s[^<]{10,300}\swrote:\s*$/i)
+    const splitAt = onWroteBefore > 0 ? onWroteBefore : blockquoteIdx
+    return { newContent: html.slice(0, splitAt), quotedContent: html.slice(splitAt) }
+  }
+
+  return { newContent: html, quotedContent: null }
+}
+
+/** Split plain text content into new content and quoted reply content */
+function splitQuotedText(text: string): { newContent: string; quotedContent: string | null } {
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+
+    // "On <date> <name> wrote:" — single line
+    if (/^On .+ wrote:\s*$/i.test(trimmed))
+      return { newContent: lines.slice(0, i).join('\n').trimEnd(), quotedContent: lines.slice(i).join('\n') }
+
+    // Multi-line: "On <date> <name>" on one line, "wrote:" on the next
+    if (/^On .+/i.test(trimmed) && i + 1 < lines.length && /^\s*wrote:\s*$/i.test(lines[i + 1]))
+      return { newContent: lines.slice(0, i).join('\n').trimEnd(), quotedContent: lines.slice(i).join('\n') }
+
+    // Forwarded / Original message
+    if (trimmed.startsWith('---------- Forwarded message') ||
+        trimmed.startsWith('---------- Original Message'))
+      return { newContent: lines.slice(0, i).join('\n').trimEnd(), quotedContent: lines.slice(i).join('\n') }
+
+    // "From: user@example.com" (Outlook forwards) — not on first line
+    if (/^From:\s+.+@.+/i.test(trimmed) && i > 0)
+      return { newContent: lines.slice(0, i).join('\n').trimEnd(), quotedContent: lines.slice(i).join('\n') }
+  }
+  // Lines starting with > (quoted text)
+  const firstQuoteLine = lines.findIndex(l => l.trimStart().startsWith('>'))
+  if (firstQuoteLine > 0) {
+    return {
+      newContent: lines.slice(0, firstQuoteLine).join('\n').trimEnd(),
+      quotedContent: lines.slice(firstQuoteLine).join('\n'),
+    }
+  }
+  return { newContent: text, quotedContent: null }
+}
+
 const statusColors: Record<string, string> = {
   Open: 'bg-blue-100 text-blue-800',
   Pending: 'bg-yellow-100 text-yellow-800',
@@ -96,6 +173,7 @@ export function TicketDetailPage() {
   const [isInternalNote, setIsInternalNote] = useState(false)
   const [showCannedPicker, setShowCannedPicker] = useState(false)
   const [ticketIdCopied, setTicketIdCopied] = useState(false)
+  const [expandedQuotes, setExpandedQuotes] = useState<Set<string>>(new Set())
   const [editorKey, setEditorKey] = useState(0)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkTargetId, setLinkTargetId] = useState('')
@@ -730,11 +808,57 @@ export function TicketDetailPage() {
                 <span className="text-xs text-muted-foreground">{formatDate(msg.createdOnDateTime)}</span>
               </div>
             </div>
-            {msg.bodyHtml ? (
-              <div className="prose prose-sm max-w-none dark:prose-invert text-sm" dangerouslySetInnerHTML={{ __html: msg.bodyHtml }} />
-            ) : (
-              <div className="text-sm whitespace-pre-wrap">{msg.body}</div>
-            )}
+            {(() => {
+              const isQuoteExpanded = expandedQuotes.has(msg.id)
+              if (msg.bodyHtml) {
+                const { newContent, quotedContent } = splitQuotedHtml(msg.bodyHtml)
+                return (
+                  <>
+                    <div className="prose prose-sm max-w-none dark:prose-invert text-sm" dangerouslySetInnerHTML={{ __html: newContent }} />
+                    {quotedContent && (
+                      <>
+                        <button
+                          onClick={() => setExpandedQuotes(prev => {
+                            const next = new Set(prev)
+                            isQuoteExpanded ? next.delete(msg.id) : next.add(msg.id)
+                            return next
+                          })}
+                          className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          {isQuoteExpanded ? '▼ Hide quoted text' : '▶ Show quoted text'}
+                        </button>
+                        {isQuoteExpanded && (
+                          <div className="mt-2 border-l-2 border-muted pl-3 opacity-60 prose prose-sm max-w-none dark:prose-invert text-sm" dangerouslySetInnerHTML={{ __html: quotedContent }} />
+                        )}
+                      </>
+                    )}
+                  </>
+                )
+              }
+              const { newContent, quotedContent } = splitQuotedText(msg.body)
+              return (
+                <>
+                  <div className="text-sm whitespace-pre-wrap">{newContent}</div>
+                  {quotedContent && (
+                    <>
+                      <button
+                        onClick={() => setExpandedQuotes(prev => {
+                          const next = new Set(prev)
+                          isQuoteExpanded ? next.delete(msg.id) : next.add(msg.id)
+                          return next
+                        })}
+                        className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        {isQuoteExpanded ? '▼ Hide quoted text' : '▶ Show quoted text'}
+                      </button>
+                      {isQuoteExpanded && (
+                        <div className="mt-2 border-l-2 border-muted pl-3 opacity-60 text-sm whitespace-pre-wrap">{quotedContent}</div>
+                      )}
+                    </>
+                  )}
+                </>
+              )
+            })()}
           </div>
         ))}
       </div>
