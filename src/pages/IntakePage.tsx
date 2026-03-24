@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Mail, Loader2, Check, X, AlertTriangle, Shield, Plus, Trash2, RefreshCw, Pencil, Download, CheckSquare, Square } from 'lucide-react'
+import { Mail, Loader2, Check, X, AlertTriangle, Shield, Plus, Trash2, RefreshCw, Pencil, Download, CheckSquare, Square, Play } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -40,7 +40,7 @@ interface IntakeRuleResponse {
   projectId: string
   name: string
   conditions: IntakeRuleCondition[]
-  action: 'AutoApprove' | 'AutoDeny' | 'AutoDenyPermanent'
+  action: 'AutoApprove' | 'AutoDeny'
   priority: number
   isEnabled: boolean
   createdOnDateTime: number
@@ -64,7 +64,6 @@ const conditionLabelKeys: Record<string, string> = {
 const actionColors: Record<string, string> = {
   AutoApprove: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   AutoDeny: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  AutoDenyPermanent: 'bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-red-300',
 }
 
 export function IntakePage() {
@@ -85,6 +84,9 @@ export function IntakePage() {
   // Rules state
   const [showCreateRule, setShowCreateRule] = useState(false)
   const [deleteRuleId, setDeleteRuleId] = useState<string | null>(null)
+  const [runRuleResult, setRunRuleResult] = useState<{ matched: number; total: number } | null>(null)
+  const [runningRuleId, setRunningRuleId] = useState<string | null>(null)
+  const [runRuleError, setRunRuleError] = useState<string | null>(null)
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null)
   const [ruleName, setRuleName] = useState('')
   const [ruleConditions, setRuleConditions] = useState<{ type: string; value: string }[]>([{ type: 'FromEmail', value: '' }])
@@ -161,6 +163,23 @@ export function IntakePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intakeRules'] })
       setDeleteRuleId(null)
+    },
+  })
+
+  const runRule = useMutation({
+    mutationFn: (ruleId: string) => {
+      setRunningRuleId(ruleId)
+      return api.post<{ matched: number; total: number }>(`/api/v1/companies/${companyId}/projects/${projectId}/intake-rules/${ruleId}/run`)
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['intake'] })
+      queryClient.invalidateQueries({ queryKey: ['intakePendingCount'] })
+      setRunRuleResult(data)
+      setRunningRuleId(null)
+    },
+    onError: (err: Error) => {
+      setRunRuleError(err.message || 'Failed to run rule')
+      setRunningRuleId(null)
     },
   })
 
@@ -435,6 +454,30 @@ export function IntakePage() {
         />
       )}
 
+      {/* Run rule result modal */}
+      {runRuleResult && (
+        <ConfirmModal
+          title={runRuleResult.matched > 0 ? 'Rule Applied' : 'No Matches'}
+          message={runRuleResult.matched > 0
+            ? `${runRuleResult.matched} of ${runRuleResult.total} pending items matched and were processed.`
+            : `No matches found out of ${runRuleResult.total} pending items.`}
+          confirmLabel="OK"
+          onConfirm={() => setRunRuleResult(null)}
+          onCancel={() => setRunRuleResult(null)}
+        />
+      )}
+
+      {/* Run rule error modal */}
+      {runRuleError && (
+        <ConfirmModal
+          title="Error"
+          message={`Failed to run rule: ${runRuleError}`}
+          confirmLabel="OK"
+          onConfirm={() => setRunRuleError(null)}
+          onCancel={() => setRunRuleError(null)}
+        />
+      )}
+
       {/* === RULES TAB === */}
       {activeTab === 'rules' && (
         <div>
@@ -502,7 +545,6 @@ export function IntakePage() {
                   >
                     <option value="AutoApprove">{t('intakeRules.autoApprove')}</option>
                     <option value="AutoDeny">{t('intakeRules.autoDeny')}</option>
-                    <option value="AutoDenyPermanent">{t('intakeRules.autoDenyPermanent')}</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -550,6 +592,16 @@ export function IntakePage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 w-7 p-0"
+                      title="Run against pending items"
+                      onClick={() => runRule.mutate(rule.id)}
+                      disabled={runningRuleId !== null}
+                    >
+                      {runningRuleId === rule.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
