@@ -9,6 +9,7 @@ import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
+import { copyToClipboard } from '@/lib/utils'
 import type { UserResponse } from '@/types/api'
 
 interface TicketResponse {
@@ -94,6 +95,7 @@ export function TicketDetailPage() {
   const [replyHtml, setReplyHtml] = useState('')
   const [isInternalNote, setIsInternalNote] = useState(false)
   const [showCannedPicker, setShowCannedPicker] = useState(false)
+  const [ticketIdCopied, setTicketIdCopied] = useState(false)
   const [editorKey, setEditorKey] = useState(0)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkTargetId, setLinkTargetId] = useState('')
@@ -415,9 +417,14 @@ export function TicketDetailPage() {
 
         <div className="flex items-start justify-between gap-4">
           <div>
+            <button
+              onClick={() => { copyToClipboard(String(ticket.ticketNumber)); setTicketIdCopied(true); setTimeout(() => setTicketIdCopied(false), 2000) }}
+              className="text-xs font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground cursor-pointer"
+            >
+              {ticketIdCopied ? 'Copied!' : `Ticket #${ticket.ticketNumber}`}
+            </button>
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-bold tracking-tight">{ticket.subject}</h2>
-              <span className="text-sm text-muted-foreground">#{ticket.ticketNumber}</span>
               {activeViewers.length > 0 && (
                 <div className="flex items-center gap-1 ml-2">
                   {activeViewers.map((v) => (
