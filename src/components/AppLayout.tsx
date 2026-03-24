@@ -116,6 +116,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <Link
                   key={item.href}
                   to={item.href}
+                  {...(item.href === '/tickets' ? { search: {} } : {})}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-accent text-accent-foreground'

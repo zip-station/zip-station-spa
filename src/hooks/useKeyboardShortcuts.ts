@@ -28,7 +28,7 @@ export function useKeyboardShortcuts() {
           document.removeEventListener('keydown', waitForSecond)
           switch (e2.key) {
             case 'd': router.navigate({ to: '/' }); break
-            case 't': router.navigate({ to: '/tickets' }); break
+            case 't': router.navigate({ to: '/tickets', search: { status: undefined, assigned: undefined, priority: undefined, query: undefined, page: undefined } }); break
             case 'i': router.navigate({ to: '/intake' }); break
             case 'c': router.navigate({ to: '/customers' }); break
             case 'p': router.navigate({ to: '/projects' }); break

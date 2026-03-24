@@ -408,10 +408,10 @@ export function TicketDetailPage() {
 
       {/* Header */}
       <div className="mb-6">
-        <Link to="/tickets" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
+        <button onClick={() => window.history.back()} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
           <ArrowLeft className="h-4 w-4" />
           {t('ticketDetail.backToTickets')}
-        </Link>
+        </button>
 
         <div className="flex items-start justify-between gap-4">
           <div>

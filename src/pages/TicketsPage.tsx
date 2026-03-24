@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Inbox, Plus, Loader2, ArrowRight, Clock, Search, CheckSquare, Square, X, Trash2, UserPlus } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useSearch, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
@@ -62,17 +62,20 @@ export function TicketsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
-  // Check for ?create=true from keyboard shortcut
-  const urlParams = new URLSearchParams(window.location.search)
-  const shouldCreate = urlParams.get('create') === 'true'
+  const search = useSearch({ from: '/tickets' })
+  const navigate = useNavigate()
 
-  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(['Open', 'Pending']))
-  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>('all')
-  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
-  const [page, setPage] = useState(1)
-  const [searchInput, setSearchInput] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showCreate, setShowCreate] = useState(shouldCreate)
+  // Initialize filters from URL search params
+  const defaultStatuses = new Set(['Open', 'Pending'])
+  const initialStatuses = search.status === 'all' ? new Set<string>() : search.status ? new Set(search.status.split(',')) : defaultStatuses
+
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(initialStatuses)
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>((search.assigned as AssignmentFilter) || 'all')
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>((search.priority as PriorityFilter) || 'all')
+  const [page, setPage] = useState(search.page || 1)
+  const [searchInput, setSearchInput] = useState(search.query || '')
+  const [searchQuery, setSearchQuery] = useState(search.query || '')
+  const [showCreate, setShowCreate] = useState(false)
   const [subject, setSubject] = useState('')
   const [projectId, setProjectId] = useState('')
   const [priority, setPriority] = useState('Normal')
@@ -90,6 +93,24 @@ export function TicketsPage() {
     const timer = setTimeout(() => setSearchQuery(searchInput), 300)
     return () => clearTimeout(timer)
   }, [searchInput])
+
+  // Sync filters to URL search params
+  const updateSearchParams = useCallback(() => {
+    const statusStr = statusFilter.size === 0 ? 'all' : Array.from(statusFilter).sort().join(',')
+    navigate({
+      to: '/tickets',
+      search: {
+        status: statusStr !== 'Open,Pending' ? statusStr : undefined,
+        assigned: assignmentFilter !== 'all' ? assignmentFilter : undefined,
+        priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+        query: searchQuery || undefined,
+        page: page > 1 ? page : undefined,
+      },
+      replace: true,
+    })
+  }, [statusFilter, assignmentFilter, priorityFilter, searchQuery, page, navigate])
+
+  useEffect(() => { updateSearchParams() }, [updateSearchParams])
 
   const { data, isLoading } = useQuery({
     queryKey: ['tickets', companyId, Array.from(statusFilter).sort().join(','), assignmentFilter, priorityFilter, selectedProjectId, page, searchQuery],

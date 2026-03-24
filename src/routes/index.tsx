@@ -37,6 +37,13 @@ const ticketsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tickets',
   component: TicketsPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    status: (search.status as string) || undefined,
+    assigned: (search.assigned as string) || undefined,
+    priority: (search.priority as string) || undefined,
+    query: (search.query as string) || undefined,
+    page: Number(search.page) || undefined,
+  }),
 })
 
 const projectsRoute = createRoute({
