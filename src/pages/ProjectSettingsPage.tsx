@@ -44,6 +44,8 @@ interface ProjectDetailResponse {
       maxLength: number
       format: 'Numeric' | 'Alphanumeric' | 'DateNumeric'
       subjectTemplate: string
+      startingNumber?: number
+      useRandomNumbers?: boolean
     }
     spam?: {
       autoDenyThreshold: number
@@ -102,6 +104,8 @@ export function ProjectSettingsPage() {
   const [maxLength, setMaxLength] = useState(6)
   const [format, setFormat] = useState<string>('Numeric')
   const [subjectTemplate, setSubjectTemplate] = useState('{ProjectName} - Ticket {TicketId}')
+  const [startingNumber, setStartingNumber] = useState(0)
+  const [useRandomNumbers, setUseRandomNumbers] = useState(false)
 
   // SMTP settings (outgoing)
   const [smtpHost, setSmtpHost] = useState('')
@@ -166,6 +170,8 @@ export function ProjectSettingsPage() {
       setMaxLength(s.ticketId.maxLength)
       setFormat(s.ticketId.format)
       setSubjectTemplate(s.ticketId.subjectTemplate)
+      setStartingNumber(s.ticketId.startingNumber || 0)
+      setUseRandomNumbers(s.ticketId.useRandomNumbers || false)
       if (s.smtp) {
         setSmtpHost(s.smtp.host)
         setSmtpPort(s.smtp.port)
@@ -240,7 +246,7 @@ export function ProjectSettingsPage() {
 
     const data: Record<string, unknown> = {
       assignmentMode,
-      ticketId: { prefix, minLength, maxLength, format, subjectTemplate },
+      ticketId: { prefix, minLength, maxLength, format, subjectTemplate, startingNumber, useRandomNumbers },
     }
 
     // Only send SMTP if host is filled
@@ -356,7 +362,13 @@ export function ProjectSettingsPage() {
       return prefix ? `${prefix}-${yy}${mm}${dd}-${numPart}` : `${yy}${mm}${dd}-${numPart}`
     }
     // Numeric
-    const padded = '1'.padStart(minLength, '0')
+    if (useRandomNumbers) {
+      const min = startingNumber || Math.pow(10, minLength - 1)
+      const sample = String(min + Math.floor(Math.random() * 100)).padStart(minLength, '0')
+      return prefix ? `${prefix}-${sample}` : sample
+    }
+    const nextNum = startingNumber > 0 ? startingNumber : 1
+    const padded = String(nextNum).padStart(minLength, '0')
     return prefix ? `${prefix}-${padded}` : padded
   })()
 
@@ -447,6 +459,42 @@ export function ProjectSettingsPage() {
                 />
                 <p className="text-xs text-muted-foreground">{t('projectSettings.ticketIdMaxLengthHelp', { capacity: formatNumber(capacity) })}</p>
               </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {format === 'Numeric' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Starting Number</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={startingNumber}
+                  onChange={(e) => setStartingNumber(Math.max(0, parseInt(e.target.value) || 0))}
+                />
+                <p className="text-xs text-muted-foreground">New tickets will never have a number below this value. Leave at 0 to start from 1.</p>
+              </div>
+              )}
+              {format === 'Numeric' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Number Assignment</label>
+                <div className="flex items-center gap-3 h-10">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useRandomNumbers}
+                      onChange={(e) => setUseRandomNumbers(e.target.checked)}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    <span className="text-sm">Use random ticket numbers</span>
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {useRandomNumbers
+                    ? `Random numbers between ${startingNumber || Math.pow(10, minLength - 1)} and ${'9'.repeat(maxLength)}`
+                    : 'Sequential numbers (1, 2, 3, ...)'}
+                </p>
+              </div>
+              )}
             </div>
 
             {/* Capacity warning */}
