@@ -131,8 +131,11 @@ export function IntakePage() {
   const denyIntake = useMutation({
     mutationFn: ({ id, permanent }: { id: string; permanent: boolean }) =>
       api.post(`/api/v1/companies/${companyId}/intake/${id}/deny?permanent=${permanent}`),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['intake'] })
+      if (variables.permanent) {
+        queryClient.invalidateQueries({ queryKey: ['intakeRules'] })
+      }
     },
   })
 
