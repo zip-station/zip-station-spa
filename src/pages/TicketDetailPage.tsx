@@ -220,6 +220,7 @@ export function TicketDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket', companyId, ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['ticketBadgeCount'] })
       setReplyBody('')
       setReplyHtml('')
       setEditorKey((k) => k + 1)
@@ -235,6 +236,7 @@ export function TicketDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['ticket', companyId, ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
       queryClient.invalidateQueries({ queryKey: ['ticketStats'] })
+      queryClient.invalidateQueries({ queryKey: ['ticketBadgeCount'] })
     },
   })
 
