@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ArrowLeft, Loader2, Save, AlertTriangle, Key, Copy, Trash2, Plus } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
+import { copyToClipboard } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -942,7 +943,7 @@ function ApiKeysSection({ companyId, projectId }: { companyId: string; projectId
 
   const copyKey = () => {
     if (newKey) {
-      navigator.clipboard.writeText(newKey)
+      copyToClipboard(newKey)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
