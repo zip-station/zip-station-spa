@@ -58,6 +58,11 @@
   }
 }
 
+/* Preserve empty paragraphs / line breaks in rendered message content */
+.prose p:empty::before {
+  content: '\00a0'; /* non-breaking space to give empty <p> tags height */
+}
+
 /* TipTap editor styles */
 .tiptap p.is-editor-empty:first-child::before {
   color: hsl(var(--muted-foreground));

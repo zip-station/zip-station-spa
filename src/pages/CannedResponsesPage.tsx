@@ -3,6 +3,7 @@ import { MessageSquare, Plus, Loader2, Trash2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
 import { useTranslation } from 'react-i18next'
@@ -30,6 +31,8 @@ export function CannedResponsesPage() {
   const [title, setTitle] = useState('')
   const [bodyHtml, setBodyHtml] = useState('')
   const [shortcut, setShortcut] = useState('')
+  const [editorKey, setEditorKey] = useState(0)
+  const [editEditorKey, setEditEditorKey] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editBody, setEditBody] = useState('')
@@ -53,6 +56,7 @@ export function CannedResponsesPage() {
       setTitle('')
       setBodyHtml('')
       setShortcut('')
+      setEditorKey((k) => k + 1)
     },
   })
 
@@ -75,6 +79,8 @@ export function CannedResponsesPage() {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
+    const isEmpty = !bodyHtml || bodyHtml === '<p></p>' || bodyHtml.replace(/<[^>]*>/g, '').trim() === ''
+    if (isEmpty) return
     createResponse.mutate({ title, bodyHtml, shortcut: shortcut || undefined })
   }
 
@@ -83,6 +89,7 @@ export function CannedResponsesPage() {
     setEditTitle(r.title)
     setEditBody(r.bodyHtml)
     setEditShortcut(r.shortcut || '')
+    setEditEditorKey((k) => k + 1)
   }
 
   const saveEdit = (id: string) => {
@@ -123,13 +130,11 @@ export function CannedResponsesPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('cannedResponses.body')}</label>
-              <textarea
-                value={bodyHtml}
-                onChange={(e) => setBodyHtml(e.target.value)}
+              <RichTextEditor
+                key={editorKey}
+                content={bodyHtml}
+                onChange={(html) => setBodyHtml(html)}
                 placeholder={t('cannedResponses.bodyPlaceholder')}
-                rows={6}
-                required
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
             <div className="flex gap-2">
@@ -161,11 +166,10 @@ export function CannedResponsesPage() {
                     <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder={t('cannedResponses.responseTitle')} />
                     <Input value={editShortcut} onChange={(e) => setEditShortcut(e.target.value)} placeholder={t('cannedResponses.shortcut')} />
                   </div>
-                  <textarea
-                    value={editBody}
-                    onChange={(e) => setEditBody(e.target.value)}
-                    rows={4}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  <RichTextEditor
+                    key={editEditorKey}
+                    content={editBody}
+                    onChange={(html) => setEditBody(html)}
                   />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => saveEdit(r.id)} disabled={updateResponse.isPending}>
