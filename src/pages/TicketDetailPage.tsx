@@ -694,60 +694,143 @@ export function TicketDetailPage() {
         </p>
       </div>
 
-      {/* Tags */}
-      <div className="mb-6 rounded-lg border bg-card p-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold mb-3">
-          <Tag className="h-4 w-4" />
-          Tags
-          {ticket.tags?.length > 0 && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-              {ticket.tags.length}
-            </span>
-          )}
-        </h3>
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {ticket.tags?.length > 0 ? (
-            ticket.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium"
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => removeTag(tag)}
-                  className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
-                  disabled={updateTags.isPending}
-                >
-                  <X className="h-3 w-3" />
-                </button>
+      {/* Tags & Linked Tickets */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+        {/* Tags */}
+        <div className="rounded-lg border bg-card p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold mb-3">
+            <Tag className="h-4 w-4" />
+            Tags
+            {ticket.tags?.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                {ticket.tags.length}
               </span>
-            ))
-          ) : (
-            <span className="text-sm text-muted-foreground">No tags yet.</span>
-          )}
+            )}
+          </h3>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {ticket.tags?.length > 0 ? (
+              ticket.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
+                    disabled={updateTags.isPending}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">No tags yet.</span>
+            )}
+          </div>
+          <div className="flex gap-1">
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="Add a tag..."
+              className="h-8 text-xs max-w-xs"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); addTag() }
+              }}
+              disabled={updateTags.isPending}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={addTag}
+              className="h-8"
+              disabled={!tagInput.trim() || updateTags.isPending}
+            >
+              {updateTags.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <Input
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            placeholder="Add a tag..."
-            className="h-8 text-xs max-w-xs"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); addTag() }
-            }}
-            disabled={updateTags.isPending}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={addTag}
-            className="h-8"
-            disabled={!tagInput.trim() || updateTags.isPending}
-          >
-            {updateTags.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-          </Button>
+
+        {/* Linked Tickets */}
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <Link2 className="h-4 w-4" />
+              Linked Tickets
+              {ticket.linkedTicketIds?.length > 0 && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                  {ticket.linkedTicketIds.length}
+                </span>
+              )}
+            </h3>
+            {!showLinkInput && (
+              <Button size="sm" variant="outline" onClick={() => setShowLinkInput(true)}>
+                <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                Link Ticket
+              </Button>
+            )}
+          </div>
+
+          {showLinkInput && (
+            <div className="mb-3 flex items-center gap-2">
+              <input
+                type="text"
+                value={linkTargetId}
+                onChange={(e) => setLinkTargetId(e.target.value)}
+                placeholder="Enter ticket number (e.g. 6)"
+                className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && linkTargetId.trim()) {
+                    linkTicket.mutate(linkTargetId.trim())
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                onClick={() => linkTicket.mutate(linkTargetId.trim())}
+                disabled={!linkTargetId.trim() || linkTicket.isPending}
+              >
+                {linkTicket.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                Link
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setShowLinkInput(false); setLinkTargetId('') }}
+              >
+                <XCircle className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {ticket.linkedTicketIds?.length > 0 ? (
+            <div className="space-y-1">
+              {ticket.linkedTicketIds.map((linkedId) => (
+                <div key={linkedId} className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted/50">
+                  <Link
+                    to="/tickets/$ticketId"
+                    params={{ ticketId: linkedId }}
+                    className="text-sm text-primary hover:underline font-mono"
+                  >
+                    {linkedId}
+                  </Link>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-muted-foreground hover:text-red-600"
+                    onClick={() => unlinkTicket.mutate(linkedId)}
+                    disabled={unlinkTicket.isPending}
+                  >
+                    Unlink
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No linked tickets.</p>
+          )}
         </div>
       </div>
 
@@ -864,85 +947,6 @@ export function TicketDetailPage() {
         ))}
       </div>
 
-      {/* Linked tickets section */}
-      <div className="mb-6 rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <Link2 className="h-4 w-4" />
-            Linked Tickets
-            {ticket.linkedTicketIds?.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                {ticket.linkedTicketIds.length}
-              </span>
-            )}
-          </h3>
-          {!showLinkInput && (
-            <Button size="sm" variant="outline" onClick={() => setShowLinkInput(true)}>
-              <Link2 className="mr-1.5 h-3.5 w-3.5" />
-              Link Ticket
-            </Button>
-          )}
-        </div>
-
-        {showLinkInput && (
-          <div className="mb-3 flex items-center gap-2">
-            <input
-              type="text"
-              value={linkTargetId}
-              onChange={(e) => setLinkTargetId(e.target.value)}
-              placeholder="Enter ticket number (e.g. 6)"
-              className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && linkTargetId.trim()) {
-                  linkTicket.mutate(linkTargetId.trim())
-                }
-              }}
-            />
-            <Button
-              size="sm"
-              onClick={() => linkTicket.mutate(linkTargetId.trim())}
-              disabled={!linkTargetId.trim() || linkTicket.isPending}
-            >
-              {linkTicket.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Link
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => { setShowLinkInput(false); setLinkTargetId('') }}
-            >
-              <XCircle className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
-
-        {ticket.linkedTicketIds?.length > 0 ? (
-          <div className="space-y-1">
-            {ticket.linkedTicketIds.map((linkedId) => (
-              <div key={linkedId} className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted/50">
-                <Link
-                  to="/tickets/$ticketId"
-                  params={{ ticketId: linkedId }}
-                  className="text-sm text-primary hover:underline font-mono"
-                >
-                  {linkedId}
-                </Link>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs text-muted-foreground hover:text-red-600"
-                  onClick={() => unlinkTicket.mutate(linkedId)}
-                  disabled={unlinkTicket.isPending}
-                >
-                  Unlink
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No linked tickets.</p>
-        )}
-      </div>
 
       {/* Reply form */}
       {ticket.status !== 'Closed' && ticket.status !== 'Merged' && !ticket.mergedIntoTicketId && (
