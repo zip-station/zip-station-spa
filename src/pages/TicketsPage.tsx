@@ -23,6 +23,7 @@ interface TicketResponse {
   customerName?: string
   customerEmail?: string
   tags: string[]
+  lastMessageSource?: 'Customer' | 'Agent' | 'System'
   createdOnDateTime: number
   updatedOnDateTime: number
 }
@@ -583,6 +584,11 @@ export function TicketsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate font-medium">{ticket.subject}</p>
+                      {ticket.status === 'Pending' && ticket.lastMessageSource === 'Customer' && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                          Customer replied
+                        </span>
+                      )}
                       {ticket.status === 'Pending' && ticket.updatedOnDateTime > 0 &&
                         (Date.now() - ticket.updatedOnDateTime) > 5 * 24 * 60 * 60 * 1000 && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
