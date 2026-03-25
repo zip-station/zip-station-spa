@@ -4,22 +4,18 @@ export interface UserResponse {
   email: string
   displayName: string
   avatarUrl?: string
-  companyMemberships: CompanyMembershipResponse[]
-  projectMemberships: ProjectMembershipResponse[]
+  roleAssignments: RoleAssignmentResponse[]
+  isOwner: boolean
   isDisabled: boolean
   createdOnDateTime: number
   updatedOnDateTime: number
 }
 
-export interface CompanyMembershipResponse {
+export interface RoleAssignmentResponse {
   companyId: string
-  role: 'Owner' | 'Admin' | 'Member'
-}
-
-export interface ProjectMembershipResponse {
-  companyId: string
-  projectId: string
-  role: 'Owner' | 'Admin' | 'Member'
+  roleId: string
+  roleName?: string
+  projectId?: string
 }
 
 export interface ProjectResponse {
