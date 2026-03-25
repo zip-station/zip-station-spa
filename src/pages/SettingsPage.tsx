@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Globe, Check, Sun, Moon, Monitor, Users, Plus, Loader2, Mail, Shield, Trash2, Ban, CheckCircle, Save } from 'lucide-react'
+import { Globe, Check, Sun, Moon, Monitor, Users, Plus, Loader2, Mail, Shield, Trash2, Ban, CheckCircle, Save, AlertTriangle, Crown } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { supportedLanguages } from '@/i18n'
@@ -23,11 +23,11 @@ export function SettingsPage() {
   const [showInvite, setShowInvite] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteDisplayName, setInviteDisplayName] = useState('')
-  const [inviteRole, setInviteRole] = useState<'Owner' | 'Admin' | 'Member'>('Member')
   const [inviteError, setInviteError] = useState<string | null>(null)
 
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null)
   const [disableTarget, setDisableTarget] = useState<UserResponse | null>(null)
+  const [transferTarget, setTransferTarget] = useState<UserResponse | null>(null)
 
   // Company settings
   const [baseUrl, setBaseUrl] = useState('')
@@ -112,14 +112,13 @@ export function SettingsPage() {
   })
 
   const inviteUser = useMutation({
-    mutationFn: (data: { email: string; displayName?: string; companyRole: string }) =>
+    mutationFn: (data: { email: string; displayName?: string }) =>
       api.post<UserResponse>(`/api/v1/users/invite?companyId=${companyId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companyMembers', companyId] })
       setShowInvite(false)
       setInviteEmail('')
       setInviteDisplayName('')
-      setInviteRole('Member')
       setInviteError(null)
     },
     onError: (err: Error) => {
@@ -145,20 +144,29 @@ export function SettingsPage() {
     },
   })
 
+  const transferOwnership = useMutation({
+    mutationFn: (userId: string) =>
+      api.post(`/api/v1/users/${userId}/transfer-ownership?companyId=${companyId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyMembers', companyId] })
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] })
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] })
+      setTransferTarget(null)
+    },
+  })
+
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault()
     setInviteError(null)
     inviteUser.mutate({
       email: inviteEmail,
       displayName: inviteDisplayName || undefined,
-      companyRole: inviteRole,
     })
   }
 
   const roleColors: Record<string, string> = {
     Owner: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-    Admin: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    Member: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+    'No Role': 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
   }
 
   const handleLanguageChange = (code: string) => {
@@ -337,6 +345,12 @@ export function SettingsPage() {
         {showInvite && (
           <div className="mb-4 rounded-lg border bg-accent/30 p-4">
             <h4 className="mb-3 text-sm font-semibold">{t('settings.inviteNewMember')}</h4>
+            {!company?.settings?.baseUrl && (
+              <div className="mb-3 flex items-start gap-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-700 dark:text-yellow-400">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>Dashboard URL is not configured. Invited members will not receive a signup link in their invitation email. Set it in the <strong>Dashboard URL</strong> section above.</span>
+              </div>
+            )}
             {inviteError && (
               <div className="mb-3 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {inviteError}
@@ -364,18 +378,6 @@ export function SettingsPage() {
                     onChange={(e) => setInviteDisplayName(e.target.value)}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">{t('common.role')}</label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as 'Owner' | 'Admin' | 'Member')}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="Member">{t('settings.roleMember')}</option>
-                    <option value="Admin">{t('settings.roleAdmin')}</option>
-                    <option value="Owner">{t('settings.roleOwner')}</option>
-                  </select>
-                </div>
               </div>
               <div className="flex gap-2">
                 <Button type="submit" size="sm" disabled={inviteUser.isPending}>
@@ -400,14 +402,11 @@ export function SettingsPage() {
         {!membersLoading && members && members.length > 0 && (
           <div className="divide-y rounded-lg border">
             {members.map((member) => {
-              const membership = member.companyMemberships?.find((m) => m.companyId === companyId)
-              const role = membership?.role ?? 'Member'
               const isCurrentUser = currentUser?.id === member.id
-              const currentRole = currentUser?.companyMemberships?.find((m) => m.companyId === companyId)?.role
-              const canManage = !isCurrentUser && (
-                currentRole === 'Owner' ||
-                (currentRole === 'Admin' && role === 'Member')
-              )
+              const isOwner = member.isOwner
+              const role = isOwner ? 'Owner' : (member.roleAssignments?.find(ra => ra.companyId === companyId)?.roleName || 'No Role')
+              const currentUserIsOwner = currentUser?.isOwner ?? false
+              const canManage = !isCurrentUser && currentUserIsOwner
               return (
                 <div key={member.id} className="flex items-center gap-4 px-4 py-3">
                   <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium ${member.isDisabled ? 'opacity-40' : ''}`}>
@@ -443,12 +442,23 @@ export function SettingsPage() {
                         </Button>
                       </>
                     )}
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${roleColors[role] ?? roleColors.Member}`}>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${roleColors[role] ?? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'}`}>
                       <Shield className="h-3 w-3" />
                       {role}
                     </span>
                     {canManage && (
                       <>
+                        {!isOwner && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2"
+                            title="Transfer Ownership"
+                            onClick={() => setTransferTarget(member)}
+                          >
+                            <Crown className="h-3.5 w-3.5 text-purple-600" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -513,6 +523,18 @@ export function SettingsPage() {
           destructive={!disableTarget.isDisabled}
           onConfirm={() => toggleDisableMember.mutate(disableTarget.id)}
           onCancel={() => setDisableTarget(null)}
+        />
+      )}
+
+      {transferTarget && (
+        <ConfirmModal
+          title="Transfer Ownership"
+          message={`Are you sure you want to transfer ownership to ${transferTarget.displayName || transferTarget.email}? You will lose owner privileges and this cannot be undone without the new owner transferring back.`}
+          confirmLabel="Transfer Ownership"
+          cancelLabel={t('common.cancel')}
+          destructive
+          onConfirm={() => transferOwnership.mutate(transferTarget.id)}
+          onCancel={() => setTransferTarget(null)}
         />
       )}
     </>
