@@ -1,25 +1,27 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Inbox, FolderOpen, Settings, Menu, X, LayoutDashboard, LogOut, Users, Mail, MessageSquare, ClipboardList, Bell, FileText, ChevronDown, HelpCircle } from 'lucide-react'
+import { Inbox, FolderOpen, Settings, Menu, X, LayoutDashboard, LogOut, Users, Mail, MessageSquare, ClipboardList, Bell, FileText, ChevronDown, HelpCircle, Shield } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 
 const navItemDefs = [
-  { icon: LayoutDashboard, labelKey: 'nav.dashboard', href: '/' },
-  { icon: Inbox, labelKey: 'nav.tickets', href: '/tickets' },
-  { icon: Mail, labelKey: 'nav.intake', href: '/intake' },
-  { icon: Users, labelKey: 'nav.customers', href: '/customers' },
-  { icon: FolderOpen, labelKey: 'nav.projects', href: '/projects' },
-  { icon: MessageSquare, labelKey: 'nav.cannedResponses', href: '/canned-responses' },
-  { icon: Bell, labelKey: 'nav.alerts', href: '/alerts' },
-  { icon: FileText, labelKey: 'nav.reports', href: '/reports' },
-  { icon: ClipboardList, labelKey: 'nav.auditLog', href: '/audit-log' },
-  { icon: Settings, labelKey: 'nav.settings', href: '/settings' },
+  { icon: LayoutDashboard, labelKey: 'nav.dashboard', href: '/', permission: 'Dashboard.View' as const },
+  { icon: Inbox, labelKey: 'nav.tickets', href: '/tickets', permission: 'Tickets.View' as const },
+  { icon: Mail, labelKey: 'nav.intake', href: '/intake', permission: 'Intake.View' as const },
+  { icon: Users, labelKey: 'nav.customers', href: '/customers', permission: 'Customers.View' as const },
+  { icon: FolderOpen, labelKey: 'nav.projects', href: '/projects', permission: 'Projects.View' as const },
+  { icon: MessageSquare, labelKey: 'nav.cannedResponses', href: '/canned-responses', permission: 'CannedResponses.View' as const },
+  { icon: Bell, labelKey: 'nav.alerts', href: '/alerts', permission: 'Alerts.View' as const },
+  { icon: FileText, labelKey: 'nav.reports', href: '/reports', permission: 'Reports.View' as const },
+  { icon: Shield, labelKey: 'nav.roles', href: '/roles', permission: 'Roles.View' as const },
+  { icon: ClipboardList, labelKey: 'nav.auditLog', href: '/audit-log', permission: 'AuditLog.View' as const },
+  { icon: Settings, labelKey: 'nav.settings', href: '/settings', permission: null },
 ] as const
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -31,6 +33,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { companyId } = useCurrentUser()
   const { selectedProjectId, setSelectedProjectId, projects, hasMultipleProjects } = useSelectedProject()
   useKeyboardShortcuts()
+  const { hasPermission } = usePermissions()
+
+  const navItems = navItemDefs.filter(
+    (item) => item.permission === null || hasPermission(item.permission)
+  )
 
   // Pending intake count for badge (filtered by project)
   const { data: pendingIntake } = useQuery({
@@ -107,7 +114,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           )}
 
           <nav className="mt-4 space-y-1 px-3">
-            {navItemDefs.map((item) => {
+            {navItems.map((item) => {
               const isActive = item.href === '/'
                 ? currentPath === '/'
                 : currentPath.startsWith(item.href)

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 
@@ -59,6 +60,7 @@ const channelColors: Record<AlertChannelType, string> = {
 export function AlertsPage() {
   const { companyId } = useCurrentUser()
   const { selectedProjectId: globalSelectedProjectId, projects: allProjects } = useSelectedProject()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -162,9 +164,11 @@ export function AlertsPage() {
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('alerts.title')}</h2>
           <p className="mt-1 text-muted-foreground">{t('alerts.subtitle')}</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} disabled={showCreate || editingId !== null || !projectId}>
-          <Plus className="mr-2 h-4 w-4" /> {t('alerts.newAlert')}
-        </Button>
+        {hasPermission('Alerts.Create') && (
+          <Button onClick={() => setShowCreate(true)} disabled={showCreate || editingId !== null || !projectId}>
+            <Plus className="mr-2 h-4 w-4" /> {t('alerts.newAlert')}
+          </Button>
+        )}
       </div>
 
       {/* Create form */}
@@ -333,21 +337,25 @@ export function AlertsPage() {
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{a.webhookUrl}</p>
                   </div>
                   <div className="ml-4 flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => startEdit(a)}>
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600"
-                      onClick={() => {
-                        if (confirm(t('alerts.deleteConfirm'))) {
-                          deleteAlert.mutate(a.id)
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {hasPermission('Alerts.Edit') && (
+                      <Button size="sm" variant="outline" onClick={() => startEdit(a)}>
+                        {t('common.edit')}
+                      </Button>
+                    )}
+                    {hasPermission('Alerts.Delete') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600"
+                        onClick={() => {
+                          if (confirm(t('alerts.deleteConfirm'))) {
+                            deleteAlert.mutate(a.id)
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -361,9 +369,11 @@ export function AlertsPage() {
           <Bell className="mx-auto h-12 w-12 text-muted-foreground/50" />
           <h3 className="mt-4 text-lg font-semibold">{t('alerts.noAlertsTitle')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">{t('alerts.noAlertsDesc')}</p>
-          <Button className="mt-4" onClick={() => setShowCreate(true)} disabled={!projectId}>
-            <Plus className="mr-2 h-4 w-4" /> {t('alerts.createFirst')}
-          </Button>
+          {hasPermission('Alerts.Create') && (
+            <Button className="mt-4" onClick={() => setShowCreate(true)} disabled={!projectId}>
+              <Plus className="mr-2 h-4 w-4" /> {t('alerts.createFirst')}
+            </Button>
+          )}
         </div>
       )}
     </>

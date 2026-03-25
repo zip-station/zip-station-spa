@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Toast } from '@/components/ui/Toast'
 import { Pagination } from '@/components/ui/Pagination'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 
@@ -47,6 +48,7 @@ const statusColors: Record<string, string> = {
 export function CustomerDetailPage() {
   const { customerId } = useParams({ strict: false }) as { customerId: string }
   const { companyId } = useCurrentUser()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -176,97 +178,99 @@ export function CustomerDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Edit form */}
-        <div className="lg:col-span-1">
-          <form onSubmit={handleSave} className="rounded-lg border bg-card p-4 space-y-4">
-            <h3 className="text-sm font-semibold">{t('customerDetail.customerInfo')}</h3>
+        {hasPermission('Customers.Edit') && (
+          <div className="lg:col-span-1">
+            <form onSubmit={handleSave} className="rounded-lg border bg-card p-4 space-y-4">
+              <h3 className="text-sm font-semibold">{t('customerDetail.customerInfo')}</h3>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('customerDetail.name')}</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('customerDetail.email')}</label>
-              <Input value={customer.email} disabled className="opacity-60" />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('customerDetail.notes')}</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="banned" checked={isBanned} onChange={(e) => setIsBanned(e.target.checked)} />
-              <label htmlFor="banned" className="text-sm font-medium">{t('customerDetail.banned')}</label>
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('customerDetail.tags')}</label>
-              <div className="flex flex-wrap gap-1 mb-1">
-                {tags.map((tag) => (
-                  <span key={tag} className="inline-flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs">
-                    {tag}
-                    <button type="button" onClick={() => removeTag(tag)} className="text-muted-foreground hover:text-foreground">
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('customerDetail.name')}</label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
               </div>
-              <div className="flex gap-1">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  placeholder={t('customerDetail.addTagPlaceholder')}
-                  className="h-8 text-xs"
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('customerDetail.email')}</label>
+                <Input value={customer.email} disabled className="opacity-60" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('customerDetail.notes')}</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
-                <Button type="button" size="sm" variant="outline" onClick={addTag} className="h-8">
-                  <Plus className="h-3 w-3" />
-                </Button>
               </div>
-            </div>
 
-            {/* Custom Properties */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">{t('customerDetail.customProperties')}</label>
-                <button type="button" onClick={addProperty} className="text-xs text-primary hover:underline">
-                  <Plus className="inline h-3 w-3" /> {t('common.add')}
-                </button>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="banned" checked={isBanned} onChange={(e) => setIsBanned(e.target.checked)} />
+                <label htmlFor="banned" className="text-sm font-medium">{t('customerDetail.banned')}</label>
               </div>
-              {properties.map((prop, idx) => (
-                <div key={idx} className="flex gap-1">
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t('customerDetail.tags')}</label>
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {tags.map((tag) => (
+                    <span key={tag} className="inline-flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs">
+                      {tag}
+                      <button type="button" onClick={() => removeTag(tag)} className="text-muted-foreground hover:text-foreground">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-1">
                   <Input
-                    value={prop.key}
-                    onChange={(e) => updateProperty(idx, 'key', e.target.value)}
-                    placeholder={t('customerDetail.keyPlaceholder')}
-                    className="h-8 text-xs flex-1"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    placeholder={t('customerDetail.addTagPlaceholder')}
+                    className="h-8 text-xs"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
                   />
-                  <Input
-                    value={prop.value}
-                    onChange={(e) => updateProperty(idx, 'value', e.target.value)}
-                    placeholder={t('customerDetail.valuePlaceholder')}
-                    className="h-8 text-xs flex-1"
-                  />
-                  <button type="button" onClick={() => removeProperty(idx)} className="text-muted-foreground hover:text-red-600 p-1">
-                    <Trash2 className="h-3.5 w-3.5" />
+                  <Button type="button" size="sm" variant="outline" onClick={addTag} className="h-8">
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Custom Properties */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">{t('customerDetail.customProperties')}</label>
+                  <button type="button" onClick={addProperty} className="text-xs text-primary hover:underline">
+                    <Plus className="inline h-3 w-3" /> {t('common.add')}
                   </button>
                 </div>
-              ))}
-            </div>
+                {properties.map((prop, idx) => (
+                  <div key={idx} className="flex gap-1">
+                    <Input
+                      value={prop.key}
+                      onChange={(e) => updateProperty(idx, 'key', e.target.value)}
+                      placeholder={t('customerDetail.keyPlaceholder')}
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Input
+                      value={prop.value}
+                      onChange={(e) => updateProperty(idx, 'value', e.target.value)}
+                      placeholder={t('customerDetail.valuePlaceholder')}
+                      className="h-8 text-xs flex-1"
+                    />
+                    <button type="button" onClick={() => removeProperty(idx)} className="text-muted-foreground hover:text-red-600 p-1">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
 
-            <Button type="submit" size="sm" disabled={updateCustomer.isPending}>
-              {updateCustomer.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-              {t('common.save')}
-            </Button>
-          </form>
-        </div>
+              <Button type="submit" size="sm" disabled={updateCustomer.isPending}>
+                {updateCustomer.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                {t('common.save')}
+              </Button>
+            </form>
+          </div>
+        )}
 
         {/* Tickets */}
         <div className="lg:col-span-2">

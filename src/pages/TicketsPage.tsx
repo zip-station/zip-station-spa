@@ -8,6 +8,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useProjects } from '@/hooks/useProjects'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import type { ProjectResponse, UserResponse } from '@/types/api'
@@ -60,6 +61,7 @@ export function TicketsPage() {
   const { companyId } = useCurrentUser()
   const { data: projects } = useProjects(companyId)
   const { selectedProjectId } = useSelectedProject()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -260,9 +262,11 @@ export function TicketsPage() {
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('tickets.title')}</h2>
           <p className="mt-1 text-muted-foreground">{t('tickets.subtitle')}</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} disabled={showCreate}>
-          <Plus className="mr-2 h-4 w-4" /> {t('tickets.newTicket')}
-        </Button>
+        {hasPermission('Tickets.Create') && (
+          <Button onClick={() => setShowCreate(true)} disabled={showCreate}>
+            <Plus className="mr-2 h-4 w-4" /> {t('tickets.newTicket')}
+          </Button>
+        )}
       </div>
 
       {/* Create ticket form */}
@@ -464,7 +468,7 @@ export function TicketsPage() {
       )}
 
       {/* Bulk action bar */}
-      {!showCreate && selectedTicketIds.size > 0 && (
+      {!showCreate && selectedTicketIds.size > 0 && hasPermission('Tickets.Edit') && (
         <div className="mb-4 flex items-center gap-3 rounded-lg border bg-accent/50 px-4 py-2.5">
           <span className="text-sm font-medium">
             {selectedTicketIds.size} selected
@@ -628,9 +632,11 @@ export function TicketsPage() {
           <Inbox className="mx-auto h-12 w-12 text-muted-foreground/50" />
           <h3 className="mt-4 text-lg font-semibold">{t('tickets.noTicketsTitle')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">{t('tickets.noTicketsDesc')}</p>
-          <Button className="mt-4" onClick={() => setShowCreate(true)}>
-            <Plus className="mr-2 h-4 w-4" /> {t('tickets.createFirst')}
-          </Button>
+          {hasPermission('Tickets.Create') && (
+            <Button className="mt-4" onClick={() => setShowCreate(true)}>
+              <Plus className="mr-2 h-4 w-4" /> {t('tickets.createFirst')}
+            </Button>
+          )}
         </div>
       )}
     </>

@@ -8,6 +8,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useProjects } from '@/hooks/useProjects'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import type { ProjectResponse } from '@/types/api'
@@ -70,6 +71,7 @@ export function IntakePage() {
   const { companyId } = useCurrentUser()
   const { data: projects } = useProjects(companyId)
   const { selectedProjectId: globalSelectedProjectId } = useSelectedProject()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -482,9 +484,11 @@ export function IntakePage() {
       {activeTab === 'rules' && (
         <div>
           <div className="mb-4 flex justify-end">
-            <Button size="sm" onClick={() => setShowCreateRule(!showCreateRule)} disabled={showCreateRule || !!editingRuleId || !projectId}>
-              <Plus className="mr-1 h-3 w-3" /> {t('intakeRules.newRule')}
-            </Button>
+            {hasPermission('IntakeRules.Create') && (
+              <Button size="sm" onClick={() => setShowCreateRule(!showCreateRule)} disabled={showCreateRule || !!editingRuleId || !projectId}>
+                <Plus className="mr-1 h-3 w-3" /> {t('intakeRules.newRule')}
+              </Button>
+            )}
           </div>
 
           {/* Create/Edit rule form */}
@@ -602,22 +606,26 @@ export function IntakePage() {
                     >
                       {runningRuleId === rule.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 w-7 p-0"
-                      onClick={() => startEdit(rule)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 h-7 w-7 p-0"
-                      onClick={() => setDeleteRuleId(rule.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {hasPermission('IntakeRules.Edit') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-7 p-0"
+                        onClick={() => startEdit(rule)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    {hasPermission('IntakeRules.Delete') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 h-7 w-7 p-0"
+                        onClick={() => setDeleteRuleId(rule.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -711,30 +719,36 @@ export function IntakePage() {
                   </div>
                   {email.status === 'Pending' && (
                     <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => approveIntake.mutate(email.id)}
-                        disabled={approveIntake.isPending}
-                      >
-                        <Check className="mr-1 h-3 w-3" /> {t('intake.approve')}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => denyIntake.mutate({ id: email.id, permanent: false })}
-                        disabled={denyIntake.isPending}
-                      >
-                        <X className="mr-1 h-3 w-3" /> {t('intake.deny')}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600"
-                        onClick={() => denyIntake.mutate({ id: email.id, permanent: true })}
-                        disabled={denyIntake.isPending}
-                      >
-                        {t('intake.denyPermanent')}
-                      </Button>
+                      {hasPermission('Intake.Approve') && (
+                        <Button
+                          size="sm"
+                          onClick={() => approveIntake.mutate(email.id)}
+                          disabled={approveIntake.isPending}
+                        >
+                          <Check className="mr-1 h-3 w-3" /> {t('intake.approve')}
+                        </Button>
+                      )}
+                      {hasPermission('Intake.Deny') && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => denyIntake.mutate({ id: email.id, permanent: false })}
+                            disabled={denyIntake.isPending}
+                          >
+                            <X className="mr-1 h-3 w-3" /> {t('intake.deny')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600"
+                            onClick={() => denyIntake.mutate({ id: email.id, permanent: true })}
+                            disabled={denyIntake.isPending}
+                          >
+                            {t('intake.denyPermanent')}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

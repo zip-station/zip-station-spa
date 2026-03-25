@@ -18,6 +18,7 @@ import { ProjectSettingsPage } from '@/pages/ProjectSettingsPage'
 import { CustomerDetailPage } from '@/pages/CustomerDetailPage'
 import { AlertsPage } from '@/pages/AlertsPage'
 import { ReportsPage } from '@/pages/ReportsPage'
+import { RolesPage } from '@/pages/RolesPage'
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -106,6 +107,12 @@ const reportsRoute = createRoute({
   component: ReportsPage,
 })
 
+const rolesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/roles',
+  component: RolesPage,
+})
+
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
@@ -123,6 +130,7 @@ const routeTree = rootRoute.addChildren([
   cannedResponsesRoute,
   auditLogRoute,
   alertsRoute,
+  rolesRoute,
   reportsRoute,
   projectSettingsRoute,
   settingsRoute,

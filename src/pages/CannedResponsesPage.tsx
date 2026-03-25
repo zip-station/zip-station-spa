@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 
@@ -24,6 +25,7 @@ interface CannedResponseResponse {
 export function CannedResponsesPage() {
   const { companyId } = useCurrentUser()
   const { selectedProjectId: globalSelectedProjectId, projects: allProjects } = useSelectedProject()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -106,9 +108,11 @@ export function CannedResponsesPage() {
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('cannedResponses.title')}</h2>
           <p className="mt-1 text-muted-foreground">{t('cannedResponses.subtitle')}</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} disabled={showCreate || editingId !== null || !projectId}>
-          <Plus className="mr-2 h-4 w-4" /> {t('cannedResponses.newResponse')}
-        </Button>
+        {hasPermission('CannedResponses.Create') && (
+          <Button onClick={() => setShowCreate(true)} disabled={showCreate || editingId !== null || !projectId}>
+            <Plus className="mr-2 h-4 w-4" /> {t('cannedResponses.newResponse')}
+          </Button>
+        )}
       </div>
 
       {/* Create form */}
@@ -195,21 +199,25 @@ export function CannedResponsesPage() {
                     <div className="mt-2 text-sm text-muted-foreground line-clamp-2" dangerouslySetInnerHTML={{ __html: r.bodyHtml }} />
                   </div>
                   <div className="ml-4 flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600"
-                      onClick={() => {
-                        if (confirm(t('cannedResponses.deleteConfirm'))) {
-                          deleteResponse.mutate(r.id)
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {hasPermission('CannedResponses.Edit') && (
+                      <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                        {t('common.edit')}
+                      </Button>
+                    )}
+                    {hasPermission('CannedResponses.Delete') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600"
+                        onClick={() => {
+                          if (confirm(t('cannedResponses.deleteConfirm'))) {
+                            deleteResponse.mutate(r.id)
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -223,9 +231,11 @@ export function CannedResponsesPage() {
           <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground/50" />
           <h3 className="mt-4 text-lg font-semibold">{t('cannedResponses.noResponsesTitle')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">{t('cannedResponses.noResponsesDesc')}</p>
-          <Button className="mt-4" onClick={() => setShowCreate(true)} disabled={!projectId}>
-            <Plus className="mr-2 h-4 w-4" /> {t('cannedResponses.createFirst')}
-          </Button>
+          {hasPermission('CannedResponses.Create') && (
+            <Button className="mt-4" onClick={() => setShowCreate(true)} disabled={!projectId}>
+              <Plus className="mr-2 h-4 w-4" /> {t('cannedResponses.createFirst')}
+            </Button>
+          )}
         </div>
       )}
     </>

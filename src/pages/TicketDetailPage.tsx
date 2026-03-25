@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { copyToClipboard } from '@/lib/utils'
@@ -164,6 +165,7 @@ interface CannedResponseItem {
 export function TicketDetailPage() {
   const { ticketId } = useParams({ from: '/tickets/$ticketId' })
   const { companyId } = useCurrentUser()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -573,25 +575,27 @@ export function TicketDetailPage() {
           {/* Assignment + Status actions */}
           <div className="flex items-center gap-3 shrink-0">
             {/* Assignment dropdown */}
-            <div className="flex items-center gap-2">
-              <UserCircle className="h-4 w-4 text-muted-foreground" />
-              <select
-                value={ticket.assignedToUserId ?? ''}
-                onChange={(e) => assignTicket.mutate(e.target.value || null)}
-                disabled={assignTicket.isPending}
-                className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">{t('tickets.unassigned')}</option>
-                {companyMembers?.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.displayName || member.email}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {hasPermission('Tickets.Assign') && (
+              <div className="flex items-center gap-2">
+                <UserCircle className="h-4 w-4 text-muted-foreground" />
+                <select
+                  value={ticket.assignedToUserId ?? ''}
+                  onChange={(e) => assignTicket.mutate(e.target.value || null)}
+                  disabled={assignTicket.isPending}
+                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">{t('tickets.unassigned')}</option>
+                  {companyMembers?.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.displayName || member.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
           <div className="flex gap-2">
-            {(ticket.status === 'Open' || ticket.status === 'Pending') && (
+            {hasPermission('Tickets.Edit') && (ticket.status === 'Open' || ticket.status === 'Pending') && (
               <>
                 <Button
                   size="sm"
@@ -602,49 +606,51 @@ export function TicketDetailPage() {
                   <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
                   {t('ticketDetail.markResolved')}
                 </Button>
-                {!showMergeInput ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowMergeInput(true)}
-                  >
-                    <GitMerge className="mr-1.5 h-3.5 w-3.5" />
-                    Merge
-                  </Button>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={mergeTargetId}
-                      onChange={(e) => setMergeTargetId(e.target.value)}
-                      placeholder="Target ticket number (e.g. 6)"
-                      className="h-8 w-48 rounded-md border border-input bg-background px-2 text-sm"
-                    />
+                {hasPermission('Tickets.Merge') && (
+                  !showMergeInput ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-red-600 border-red-300 hover:bg-red-50"
-                      onClick={() => {
-                        if (mergeTargetId.trim()) setShowMergeConfirm(true)
-                      }}
-                      disabled={!mergeTargetId.trim() || mergeTicket.isPending}
+                      onClick={() => setShowMergeInput(true)}
                     >
-                      {mergeTicket.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
                       <GitMerge className="mr-1.5 h-3.5 w-3.5" />
                       Merge
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setShowMergeInput(false); setMergeTargetId('') }}
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={mergeTargetId}
+                        onChange={(e) => setMergeTargetId(e.target.value)}
+                        placeholder="Target ticket number (e.g. 6)"
+                        className="h-8 w-48 rounded-md border border-input bg-background px-2 text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => {
+                          if (mergeTargetId.trim()) setShowMergeConfirm(true)
+                        }}
+                        disabled={!mergeTargetId.trim() || mergeTicket.isPending}
+                      >
+                        {mergeTicket.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                        <GitMerge className="mr-1.5 h-3.5 w-3.5" />
+                        Merge
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setShowMergeInput(false); setMergeTargetId('') }}
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )
                 )}
               </>
             )}
-            {ticket.status === 'Resolved' && (
+            {hasPermission('Tickets.Edit') && ticket.status === 'Resolved' && (
               <>
                 <Button
                   size="sm"
@@ -666,7 +672,7 @@ export function TicketDetailPage() {
                 </Button>
               </>
             )}
-            {ticket.status === 'Closed' && (
+            {hasPermission('Tickets.Edit') && ticket.status === 'Closed' && (
               <Button
                 size="sm"
                 variant="outline"
@@ -715,42 +721,46 @@ export function TicketDetailPage() {
                   className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium"
                 >
                   {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
-                    disabled={updateTags.isPending}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+                  {hasPermission('Tickets.Edit') && (
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
+                      disabled={updateTags.isPending}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </span>
               ))
             ) : (
               <span className="text-sm text-muted-foreground">No tags yet.</span>
             )}
           </div>
-          <div className="flex gap-1">
-            <Input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              placeholder="Add a tag..."
-              className="h-8 text-xs max-w-xs"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); addTag() }
-              }}
-              disabled={updateTags.isPending}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={addTag}
-              className="h-8"
-              disabled={!tagInput.trim() || updateTags.isPending}
-            >
-              {updateTags.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-            </Button>
-          </div>
+          {hasPermission('Tickets.Edit') && (
+            <div className="flex gap-1">
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="Add a tag..."
+                className="h-8 text-xs max-w-xs"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); addTag() }
+                }}
+                disabled={updateTags.isPending}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={addTag}
+                className="h-8"
+                disabled={!tagInput.trim() || updateTags.isPending}
+              >
+                {updateTags.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Linked Tickets */}
@@ -765,7 +775,7 @@ export function TicketDetailPage() {
                 </span>
               )}
             </h3>
-            {!showLinkInput && (
+            {!showLinkInput && hasPermission('Tickets.Link') && (
               <Button size="sm" variant="outline" onClick={() => setShowLinkInput(true)}>
                 <Link2 className="mr-1.5 h-3.5 w-3.5" />
                 Link Ticket
@@ -949,7 +959,7 @@ export function TicketDetailPage() {
 
 
       {/* Reply form */}
-      {ticket.status !== 'Closed' && ticket.status !== 'Merged' && !ticket.mergedIntoTicketId && (
+      {hasPermission('Tickets.Edit') && ticket.status !== 'Closed' && ticket.status !== 'Merged' && !ticket.mergedIntoTicketId && (
         <div className="rounded-lg border bg-card p-4">
           {/* Toggle reply vs internal note + canned responses */}
           <div className="mb-3 flex items-center justify-between">

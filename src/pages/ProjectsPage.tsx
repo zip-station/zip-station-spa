@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useProjects, useCreateProject, useDeleteProject } from '@/hooks/useProjects'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 
 function slugify(value: string) {
@@ -21,6 +22,7 @@ export function ProjectsPage() {
   const { data: projects, isLoading } = useProjects(companyId)
   const createProject = useCreateProject(companyId)
   const deleteProject = useDeleteProject(companyId)
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
 
   const [showCreate, setShowCreate] = useState(false)
@@ -75,9 +77,11 @@ export function ProjectsPage() {
             {t('projects.subtitle')}
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)} disabled={showCreate}>
-          <Plus className="mr-2 h-4 w-4" /> {t('projects.newProject')}
-        </Button>
+        {hasPermission('Projects.Create') && (
+          <Button onClick={() => setShowCreate(true)} disabled={showCreate}>
+            <Plus className="mr-2 h-4 w-4" /> {t('projects.newProject')}
+          </Button>
+        )}
       </div>
 
       {/* Create project form */}
@@ -224,9 +228,11 @@ export function ProjectsPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {t('projects.noProjectsDesc')}
           </p>
-          <Button className="mt-4" onClick={() => setShowCreate(true)}>
-            <Plus className="mr-2 h-4 w-4" /> {t('projects.createFirst')}
-          </Button>
+          {hasPermission('Projects.Create') && (
+            <Button className="mt-4" onClick={() => setShowCreate(true)}>
+              <Plus className="mr-2 h-4 w-4" /> {t('projects.createFirst')}
+            </Button>
+          )}
         </div>
       )}
     </>

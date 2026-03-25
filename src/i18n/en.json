@@ -35,6 +35,7 @@
     "auditLog": "Audit Log",
     "alerts": "Alerts",
     "reports": "Reports",
+    "roles": "Permissions",
     "settings": "Settings",
     "project": "Project",
     "allProjects": "All Projects"

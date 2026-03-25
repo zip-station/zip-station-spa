@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Toast } from '@/components/ui/Toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 
@@ -90,6 +91,7 @@ function formatNumber(n: number): string {
 export function ProjectSettingsPage() {
   const { projectId } = useParams({ strict: false }) as { projectId: string }
   const { companyId } = useCurrentUser()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -388,6 +390,18 @@ export function ProjectSettingsPage() {
 
   if (!project) {
     return <p className="text-muted-foreground">{t('projectSettings.projectNotFound')}</p>
+  }
+
+  if (!hasPermission('Projects.Settings')) {
+    return (
+      <div className="py-12 text-center">
+        <h2 className="text-xl font-semibold mb-2">{t('common.noPermission', 'Access Denied')}</h2>
+        <p className="text-muted-foreground">{t('common.noPermissionDesc', 'You do not have permission to access project settings.')}</p>
+        <Link to="/projects" className="mt-4 inline-flex items-center gap-1 text-sm text-primary hover:underline">
+          <ArrowLeft className="h-4 w-4" /> {t('projectSettings.backToProjects')}
+        </Link>
+      </div>
+    )
   }
 
   return (

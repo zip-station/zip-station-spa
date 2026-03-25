@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Globe, Check, Sun, Moon, Monitor, Users, Plus, Loader2, Mail, Shield, Trash2, Ban, CheckCircle, Save, AlertTriangle, Crown } from 'lucide-react'
+import { Globe, Check, Sun, Moon, Monitor, Users, Plus, Loader2, Mail, Shield, Trash2, Ban, CheckCircle, Save, AlertTriangle, Crown, X } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { supportedLanguages } from '@/i18n'
@@ -11,6 +11,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Toast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { api } from '@/lib/api'
+import { usePermissions } from '@/hooks/usePermissions'
 import type { UserResponse } from '@/types/api'
 
 export function SettingsPage() {
@@ -18,6 +19,7 @@ export function SettingsPage() {
   const currentLang = i18n.language?.split('-')[0] ?? 'en'
   const { theme, setTheme } = useThemeStore()
   const { companyId, user: currentUser } = useCurrentUser()
+  const { hasPermission } = usePermissions()
   const queryClient = useQueryClient()
 
   const [showInvite, setShowInvite] = useState(false)
@@ -44,6 +46,28 @@ export function SettingsPage() {
   const [smtpError, setSmtpError] = useState<string | null>(null)
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [smtpTesting, setSmtpTesting] = useState(false)
+
+  const { data: roles } = useQuery({
+    queryKey: ['roles', companyId],
+    queryFn: () => api.get<{ id: string; name: string }[]>(`/api/v1/companies/${companyId}/roles`),
+    enabled: !!companyId,
+  })
+
+  const assignRole = useMutation({
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      api.post(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}`, { roleId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyMembers', companyId] })
+    },
+  })
+
+  const removeRole = useMutation({
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      api.delete(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}&roleId=${roleId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyMembers', companyId] })
+    },
+  })
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['companyMembers', companyId],
@@ -164,10 +188,6 @@ export function SettingsPage() {
     })
   }
 
-  const roleColors: Record<string, string> = {
-    Owner: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-    'No Role': 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-  }
 
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code)
@@ -244,7 +264,8 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Dashboard URL */}
+      {/* Dashboard URL — owner only */}
+      {hasPermission('Projects.Settings') && (
       <div className="mb-8 rounded-lg border bg-card p-6">
         <div className="flex items-center gap-3 mb-4">
           <Globe className="h-5 w-5 text-muted-foreground" />
@@ -256,7 +277,10 @@ export function SettingsPage() {
         <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://zip.yourdomain.com" />
       </div>
 
-      {/* Company SMTP (Outgoing Email) */}
+      )}
+
+      {/* Company SMTP (Outgoing Email) — admin only */}
+      {hasPermission('Projects.Settings') && (
       <div className="mb-8 rounded-lg border bg-card p-6">
         <div className="flex items-center gap-3 mb-4">
           <Mail className="h-5 w-5 text-muted-foreground" />
@@ -325,7 +349,10 @@ export function SettingsPage() {
         </form>
       </div>
 
-      {/* Team Members */}
+      )}
+
+      {/* Team Members — requires Members.View */}
+      {hasPermission('Members.View') && (
       <div className="mb-8 rounded-lg border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -335,10 +362,12 @@ export function SettingsPage() {
               <p className="text-sm text-muted-foreground">{t('settings.teamMembersDesc')}</p>
             </div>
           </div>
+          {hasPermission('Members.Invite') && (
           <Button size="sm" onClick={() => setShowInvite(!showInvite)} disabled={showInvite}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t('settings.inviteMember')}
           </Button>
+          )}
         </div>
 
         {/* Invite form */}
@@ -404,9 +433,7 @@ export function SettingsPage() {
             {members.map((member) => {
               const isCurrentUser = currentUser?.id === member.id
               const isOwner = member.isOwner
-              const role = isOwner ? 'Owner' : (member.roleAssignments?.find(ra => ra.companyId === companyId)?.roleName || 'No Role')
-              const currentUserIsOwner = currentUser?.isOwner ?? false
-              const canManage = !isCurrentUser && currentUserIsOwner
+              const canManage = !isCurrentUser && hasPermission('Members.Edit')
               return (
                 <div key={member.id} className="flex items-center gap-4 px-4 py-3">
                   <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium ${member.isDisabled ? 'opacity-40' : ''}`}>
@@ -442,10 +469,37 @@ export function SettingsPage() {
                         </Button>
                       </>
                     )}
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${roleColors[role] ?? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'}`}>
-                      <Shield className="h-3 w-3" />
-                      {role}
-                    </span>
+                    {isOwner && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                        <Shield className="h-3 w-3" /> Owner
+                      </span>
+                    )}
+                    {member.roleAssignments?.filter(ra => ra.companyId === companyId && ra.roleId).map(ra => (
+                      <span key={`${ra.roleId}-${ra.projectId ?? 'all'}`} className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                        {ra.roleName || 'Role'}
+                        {ra.projectId && <span className="opacity-60">(project)</span>}
+                        {canManage && (
+                          <button onClick={() => removeRole.mutate({ userId: member.id, roleId: ra.roleId })} className="ml-0.5 hover:text-red-600">
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                    {canManage && !isOwner && roles && roles.length > 0 && (
+                      <select
+                        className="h-6 rounded border border-input bg-background px-1 text-xs"
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) assignRole.mutate({ userId: member.id, roleId: e.target.value })
+                          e.target.value = ''
+                        }}
+                      >
+                        <option value="">+ Role</option>
+                        {roles.filter(r => !member.roleAssignments?.some(ra => ra.roleId === r.id && !ra.projectId)).map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    )}
                     {canManage && (
                       <>
                         {!isOwner && (
@@ -492,6 +546,7 @@ export function SettingsPage() {
           </p>
         )}
       </div>
+      )}
 
       {deleteTarget && (
         <ConfirmModal
