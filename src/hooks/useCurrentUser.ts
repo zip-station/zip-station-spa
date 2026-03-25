@@ -8,7 +8,7 @@ export function useCurrentUser() {
     queryFn: () => api.get<UserResponse>('/api/v1/users/me'),
   })
 
-  const companyId = query.data?.companyMemberships?.[0]?.companyId ?? null
+  const companyId = query.data?.roleAssignments?.[0]?.companyId ?? null
 
   return {
     ...query,
