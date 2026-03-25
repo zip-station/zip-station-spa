@@ -22,7 +22,7 @@ export function InviteSetupPage({ code, onComplete }: InviteSetupPageProps) {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    api.get<{ email: string; displayName?: string }>(`/api/v1/public/invite/${code}`)
+    api.get<{ email: string; displayName?: string }>(`/api/v1/invite/${code}`)
       .then((data) => {
         setEmail(data.email)
         setDisplayName(data.displayName || '')
@@ -54,7 +54,7 @@ export function InviteSetupPage({ code, onComplete }: InviteSetupPageProps) {
       const firebaseUserId = credential.user.uid
 
       // Link Firebase account to the pre-created user record
-      await api.post(`/api/v1/public/invite/${code}/complete`, {
+      await api.post(`/api/v1/invite/${code}/complete`, {
         firebaseUserId,
         displayName: displayName || undefined,
       })
