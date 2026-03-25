@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Globe, Check, Sun, Moon, Monitor, Users, Plus, Loader2, Mail, Shield, Trash2, Ban, CheckCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Globe, Check, Sun, Moon, Monitor, Users, Plus, Loader2, Mail, Shield, Trash2, Ban, CheckCircle, Save } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { supportedLanguages } from '@/i18n'
@@ -7,6 +7,8 @@ import { useThemeStore } from '@/store/themeStore'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
+import { Toast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { api } from '@/lib/api'
 import type { UserResponse } from '@/types/api'
@@ -27,10 +29,82 @@ export function SettingsPage() {
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null)
   const [disableTarget, setDisableTarget] = useState<UserResponse | null>(null)
 
+  // Company SMTP settings
+  const [smtpHost, setSmtpHost] = useState('')
+  const [smtpPort, setSmtpPort] = useState(465)
+  const [smtpUsername, setSmtpUsername] = useState('')
+  const [smtpPassword, setSmtpPassword] = useState('')
+  const [smtpUseSsl, setSmtpUseSsl] = useState(true)
+  const [smtpFromName, setSmtpFromName] = useState('')
+  const [smtpFromEmail, setSmtpFromEmail] = useState('')
+  const [smtpSaved, setSmtpSaved] = useState(false)
+  const [smtpError, setSmtpError] = useState<string | null>(null)
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [smtpTesting, setSmtpTesting] = useState(false)
+
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['companyMembers', companyId],
     queryFn: () => api.get<UserResponse[]>(`/api/v1/users/company/${companyId}`),
     enabled: !!companyId,
+  })
+
+  const { data: company } = useQuery({
+    queryKey: ['company', companyId],
+    queryFn: () => api.get<{ settings: { smtp?: { host: string; port: number; username: string; useSsl: boolean; fromName?: string; fromEmail?: string; hasPassword?: boolean } } }>(`/api/v1/companies/${companyId}`),
+    enabled: !!companyId,
+  })
+
+  useEffect(() => {
+    if (company?.settings?.smtp) {
+      const s = company.settings.smtp
+      setSmtpHost(s.host)
+      setSmtpPort(s.port)
+      setSmtpUsername(s.username)
+      setSmtpUseSsl(s.useSsl)
+      setSmtpFromName(s.fromName || '')
+      setSmtpFromEmail(s.fromEmail || '')
+    }
+  }, [company])
+
+  const saveSmtp = useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      api.patch(`/api/v1/companies/${companyId}/settings`, { smtp: data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] })
+      setSmtpSaved(true)
+      setSmtpError(null)
+    },
+    onError: (err: Error) => setSmtpError(err.message),
+  })
+
+  const handleSmtpSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    saveSmtp.mutate({
+      host: smtpHost, port: smtpPort, username: smtpUsername,
+      password: smtpPassword, useSsl: smtpUseSsl,
+      fromName: smtpFromName || undefined, fromEmail: smtpFromEmail || undefined,
+    })
+  }
+
+  const testSmtp = async () => {
+    setSmtpTesting(true)
+    setSmtpTestResult(null)
+    try {
+      const result = await api.post<{ success: boolean; message: string }>(
+        `/api/v1/companies/${companyId}/test-smtp`,
+        { host: smtpHost, port: smtpPort, username: smtpUsername, password: smtpPassword, useSsl: smtpUseSsl }
+      )
+      setSmtpTestResult(result)
+    } catch (err: unknown) {
+      setSmtpTestResult({ success: false, message: err instanceof Error ? err.message : 'Test failed' })
+    } finally {
+      setSmtpTesting(false)
+    }
+  }
+
+  const resendInvite = useMutation({
+    mutationFn: (userId: string) =>
+      api.post(`/api/v1/users/${userId}/resend-invite?companyId=${companyId}`),
   })
 
   const inviteUser = useMutation({
@@ -158,6 +232,75 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {/* Company SMTP (Outgoing Email) */}
+      <div className="mb-8 rounded-lg border bg-card p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Mail className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <h3 className="font-semibold">Outgoing Email (SMTP)</h3>
+            <p className="text-sm text-muted-foreground">Configure SMTP to send invitation emails and system notifications.</p>
+          </div>
+        </div>
+
+        {smtpSaved && <Toast message="SMTP settings saved" type="success" onClose={() => setSmtpSaved(false)} />}
+        {smtpError && <Toast message={smtpError} type="error" onClose={() => setSmtpError(null)} />}
+
+        <form onSubmit={handleSmtpSave} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">SMTP Host</label>
+              <Input value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="smtp.example.com" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Port</label>
+              <Input type="number" value={smtpPort} onChange={(e) => setSmtpPort(parseInt(e.target.value) || 587)} />
+              <p className="text-xs text-muted-foreground">Common: 465 (SSL) or 587 (TLS)</p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Username</label>
+              <Input value={smtpUsername} onChange={(e) => setSmtpUsername(e.target.value)} placeholder="noreply@example.com" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password</label>
+              <PasswordInput value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} placeholder={company?.settings?.smtp?.hasPassword ? '••••••••' : 'Enter password'} />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">From Name <span className="text-muted-foreground">(optional)</span></label>
+              <Input value={smtpFromName} onChange={(e) => setSmtpFromName(e.target.value)} placeholder="Zip Station" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">From Email <span className="text-muted-foreground">(optional)</span></label>
+              <Input value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} placeholder="noreply@example.com" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={smtpUseSsl} onChange={(e) => setSmtpUseSsl(e.target.checked)} className="h-4 w-4 rounded border-input" />
+              Use SSL
+            </label>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" disabled={!smtpHost || smtpTesting} onClick={testSmtp}>
+                {smtpTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                Test Connection
+              </Button>
+              <Button type="submit" disabled={!smtpHost || saveSmtp.isPending}>
+                {saveSmtp.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save
+              </Button>
+            </div>
+          </div>
+          {smtpTestResult && (
+            <div className={`mt-2 rounded-md px-3 py-2 text-sm ${smtpTestResult.success ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
+              {smtpTestResult.success ? 'Connection successful!' : `Connection failed: ${smtpTestResult.message}`}
+            </div>
+          )}
+        </form>
+      </div>
+
       {/* Team Members */}
       <div className="mb-8 rounded-lg border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
@@ -268,9 +411,21 @@ export function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {!member.firebaseUserId && (
-                      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                        {t('settings.pendingSignup')}
-                      </span>
+                      <>
+                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                          {t('settings.pendingSignup')}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => resendInvite.mutate(member.id)}
+                          disabled={resendInvite.isPending}
+                        >
+                          {resendInvite.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Mail className="mr-1 h-3 w-3" />}
+                          Resend
+                        </Button>
+                      </>
                     )}
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${roleColors[role] ?? roleColors.Member}`}>
                       <Shield className="h-3 w-3" />
