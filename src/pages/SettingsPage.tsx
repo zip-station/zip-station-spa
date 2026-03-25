@@ -29,6 +29,9 @@ export function SettingsPage() {
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null)
   const [disableTarget, setDisableTarget] = useState<UserResponse | null>(null)
 
+  // Company settings
+  const [baseUrl, setBaseUrl] = useState('')
+
   // Company SMTP settings
   const [smtpHost, setSmtpHost] = useState('')
   const [smtpPort, setSmtpPort] = useState(465)
@@ -50,11 +53,12 @@ export function SettingsPage() {
 
   const { data: company } = useQuery({
     queryKey: ['company', companyId],
-    queryFn: () => api.get<{ settings: { smtp?: { host: string; port: number; username: string; useSsl: boolean; fromName?: string; fromEmail?: string; hasPassword?: boolean } } }>(`/api/v1/companies/${companyId}`),
+    queryFn: () => api.get<{ settings: { baseUrl?: string; smtp?: { host: string; port: number; username: string; useSsl: boolean; fromName?: string; fromEmail?: string; hasPassword?: boolean } } }>(`/api/v1/companies/${companyId}`),
     enabled: !!companyId,
   })
 
   useEffect(() => {
+    if (company?.settings?.baseUrl) setBaseUrl(company.settings.baseUrl)
     if (company?.settings?.smtp) {
       const s = company.settings.smtp
       setSmtpHost(s.host)
@@ -68,7 +72,7 @@ export function SettingsPage() {
 
   const saveSmtp = useMutation({
     mutationFn: (data: Record<string, unknown>) =>
-      api.patch(`/api/v1/companies/${companyId}/settings`, { smtp: data }),
+      api.patch(`/api/v1/companies/${companyId}/settings`, { baseUrl, smtp: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company', companyId] })
       setSmtpSaved(true)
@@ -230,6 +234,18 @@ export function SettingsPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Dashboard URL */}
+      <div className="mb-8 rounded-lg border bg-card p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Globe className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <h3 className="font-semibold">Dashboard URL</h3>
+            <p className="text-sm text-muted-foreground">The public URL where your Zip Station dashboard is hosted. Used in invitation emails.</p>
+          </div>
+        </div>
+        <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://zip.yourdomain.com" />
       </div>
 
       {/* Company SMTP (Outgoing Email) */}
