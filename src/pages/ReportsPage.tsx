@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 
@@ -38,6 +39,7 @@ const frequencyColors: Record<ReportFrequency, string> = {
 
 export function ReportsPage() {
   const { companyId } = useCurrentUser()
+  const { hasPermission } = usePermissions()
   const { t } = useTranslation()
   const queryClient = useQueryClient()
 
@@ -157,9 +159,11 @@ export function ReportsPage() {
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('reports.title')}</h2>
           <p className="mt-1 text-muted-foreground">{t('reports.subtitle')}</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} disabled={showCreate || editingId !== null}>
-          <Plus className="mr-2 h-4 w-4" /> {t('reports.newReport')}
-        </Button>
+        {hasPermission('Reports.Create') && (
+          <Button onClick={() => setShowCreate(true)} disabled={showCreate || editingId !== null}>
+            <Plus className="mr-2 h-4 w-4" /> {t('reports.newReport')}
+          </Button>
+        )}
       </div>
 
       {/* Create form */}
@@ -373,17 +377,21 @@ export function ReportsPage() {
                     </p>
                   </div>
                   <div className="ml-4 flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600"
-                      onClick={() => setDeleteId(r.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {hasPermission('Reports.Edit') && (
+                      <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                        {t('common.edit')}
+                      </Button>
+                    )}
+                    {hasPermission('Reports.Delete') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600"
+                        onClick={() => setDeleteId(r.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -397,9 +405,11 @@ export function ReportsPage() {
           <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
           <h3 className="mt-4 text-lg font-semibold">{t('reports.noReportsTitle')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">{t('reports.noReportsDesc')}</p>
-          <Button className="mt-4" onClick={() => setShowCreate(true)}>
-            <Plus className="mr-2 h-4 w-4" /> {t('reports.createFirst')}
-          </Button>
+          {hasPermission('Reports.Create') && (
+            <Button className="mt-4" onClick={() => setShowCreate(true)}>
+              <Plus className="mr-2 h-4 w-4" /> {t('reports.createFirst')}
+            </Button>
+          )}
         </div>
       )}
 

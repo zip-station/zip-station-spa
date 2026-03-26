@@ -375,6 +375,7 @@ export function IntakePage() {
               {pollStatus?.pending ? t('intake.checking') : t('intake.nextCheck', { countdown })}
             </span>
           )}
+          {hasPermission('Intake.ImportHistory') && (
           <div className="relative">
             <Button
               size="sm"
@@ -406,6 +407,8 @@ export function IntakePage() {
               </div>
             )}
           </div>
+          )}
+          {hasPermission('Intake.CheckNow') && (
           <Button
             size="sm"
             variant="outline"
@@ -415,6 +418,7 @@ export function IntakePage() {
             <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${waitingForPoll ? 'animate-spin' : ''}`} />
             {waitingForPoll ? t('intake.checking') : t('intake.checkNow')}
           </Button>
+          )}
         </div>
       </div>
 
@@ -666,15 +670,21 @@ export function IntakePage() {
       {selectedIntakeIds.size > 0 && (
         <div className="mb-3 flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
           <span className="text-sm font-medium">{selectedIntakeIds.size} selected</span>
-          <Button size="sm" onClick={() => bulkIntakeAction.mutate({ intakeIds: Array.from(selectedIntakeIds), action: 'approve' })} disabled={bulkIntakeAction.isPending}>
-            <Check className="mr-1 h-3 w-3" /> Approve All
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => bulkIntakeAction.mutate({ intakeIds: Array.from(selectedIntakeIds), action: 'deny' })} disabled={bulkIntakeAction.isPending}>
-            <X className="mr-1 h-3 w-3" /> Deny All
-          </Button>
-          <Button size="sm" variant="outline" className="text-red-600" onClick={() => bulkIntakeAction.mutate({ intakeIds: Array.from(selectedIntakeIds), action: 'delete' })} disabled={bulkIntakeAction.isPending}>
-            <Trash2 className="mr-1 h-3 w-3" /> Delete All
-          </Button>
+          {hasPermission('Intake.Approve') && (
+            <Button size="sm" onClick={() => bulkIntakeAction.mutate({ intakeIds: Array.from(selectedIntakeIds), action: 'approve' })} disabled={bulkIntakeAction.isPending}>
+              <Check className="mr-1 h-3 w-3" /> Approve All
+            </Button>
+          )}
+          {hasPermission('Intake.Deny') && (
+            <Button size="sm" variant="outline" onClick={() => bulkIntakeAction.mutate({ intakeIds: Array.from(selectedIntakeIds), action: 'deny' })} disabled={bulkIntakeAction.isPending}>
+              <X className="mr-1 h-3 w-3" /> Deny All
+            </Button>
+          )}
+          {hasPermission('Intake.Deny') && (
+            <Button size="sm" variant="outline" className="text-red-600" onClick={() => bulkIntakeAction.mutate({ intakeIds: Array.from(selectedIntakeIds), action: 'delete' })} disabled={bulkIntakeAction.isPending}>
+              <Trash2 className="mr-1 h-3 w-3" /> Delete All
+            </Button>
+          )}
           <button onClick={() => setSelectedIntakeIds(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
         </div>
       )}
