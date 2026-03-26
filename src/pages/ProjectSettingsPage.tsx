@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Loader2, Save, AlertTriangle, Key, Copy, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, AlertTriangle, Key, Copy, Trash2, Plus, Users, Shield, X } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { copyToClipboard } from '@/lib/utils'
@@ -912,9 +912,179 @@ ${cfMessageLabel}: I'm having trouble logging in to my account.`}
         </div>
       </form>
 
+      {/* Project Members */}
+      {hasPermission('Members.View') && (
+        <ProjectMembersSection companyId={companyId!} projectId={projectId} canManage={hasPermission('Members.Edit')} />
+      )}
+
       {/* API Keys */}
       <ApiKeysSection companyId={companyId!} projectId={projectId} />
     </>
+  )
+}
+
+function ProjectMembersSection({ companyId, projectId, canManage }: { companyId: string; projectId: string; canManage: boolean }) {
+  const queryClient = useQueryClient()
+
+  interface ProjectMemberRole { roleId: string; roleName: string; isCompanyWide: boolean }
+  interface ProjectMember { userId: string; email: string; displayName: string; avatarUrl?: string; isOwner: boolean; roles: ProjectMemberRole[] }
+
+  const { data: members, isLoading } = useQuery({
+    queryKey: ['projectMembers', companyId, projectId],
+    queryFn: () => api.get<ProjectMember[]>(`/api/v1/companies/${companyId}/projects/${projectId}/members`),
+    enabled: !!companyId && !!projectId,
+  })
+
+  const { data: companyMembers } = useQuery({
+    queryKey: ['companyMembers', companyId],
+    queryFn: () => api.get<{ id: string; email: string; displayName: string }[]>(`/api/v1/users/company/${companyId}`),
+    enabled: !!companyId && canManage,
+  })
+
+  const { data: roles } = useQuery({
+    queryKey: ['roles', companyId],
+    queryFn: () => api.get<{ id: string; name: string }[]>(`/api/v1/companies/${companyId}/roles`),
+    enabled: !!companyId && canManage,
+  })
+
+  const addMember = useMutation({
+    mutationFn: (userId: string) =>
+      api.post(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}`, { roleId: '', projectId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projectMembers', companyId, projectId] })
+    },
+  })
+
+  const removeMember = useMutation({
+    mutationFn: (userId: string) =>
+      api.delete(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}&projectId=${projectId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projectMembers', companyId, projectId] })
+      queryClient.invalidateQueries({ queryKey: ['companyMembers', companyId] })
+    },
+  })
+
+  const removeProjectRole = useMutation({
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      api.delete(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}&roleId=${roleId}&projectId=${projectId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projectMembers', companyId, projectId] })
+    },
+  })
+
+  const assignProjectRole = useMutation({
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      api.post(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}`, { roleId, projectId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projectMembers', companyId, projectId] })
+    },
+  })
+
+  const memberIds = new Set(members?.map(m => m.userId) ?? [])
+  const availableMembers = companyMembers?.filter(m => !memberIds.has(m.id)) ?? []
+
+  return (
+    <div className="mt-8 rounded-lg border bg-card p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Users className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <h3 className="font-semibold">Project Members</h3>
+            <p className="text-sm text-muted-foreground">Users with access to this project</p>
+          </div>
+        </div>
+        {canManage && availableMembers.length > 0 && (
+          <select
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) addMember.mutate(e.target.value)
+              e.target.value = ''
+            }}
+          >
+            <option value="">+ Add Member</option>
+            {availableMembers.map(m => (
+              <option key={m.id} value={m.id}>{m.displayName || m.email}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+
+      {!isLoading && members && members.length > 0 && (
+        <div className="divide-y rounded-md border">
+          {members.map(member => (
+            <div key={member.userId} className="px-3 py-2 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{member.displayName || member.email}</p>
+                    {member.isOwner && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                        <Shield className="h-3 w-3" /> Owner
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{member.email}</p>
+                </div>
+                <div className="flex items-center gap-1 ml-2">
+                  {canManage && !member.isOwner && roles && roles.length > 0 && (
+                    <select
+                      className="h-6 rounded border border-input bg-background px-1 text-xs"
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) assignProjectRole.mutate({ userId: member.userId, roleId: e.target.value })
+                        e.target.value = ''
+                      }}
+                    >
+                      <option value="">+ Role</option>
+                      {roles.filter(r => !member.roles.some(mr => mr.roleId === r.id)).map(r => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  {canManage && !member.isOwner && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 w-7 p-0 text-red-600"
+                      title="Remove from project"
+                      onClick={() => removeMember.mutate(member.userId)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {member.roles.length > 0 && (
+                <div className="flex flex-wrap gap-1 ml-0">
+                  {member.roles.map(r => (
+                    <span key={r.roleId} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${r.isCompanyWide ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}`}>
+                      {r.roleName}
+                      {r.isCompanyWide && <span className="opacity-60">(company)</span>}
+                      {canManage && !member.isOwner && !r.isCompanyWide && (
+                        <button
+                          onClick={() => removeProjectRole.mutate({ userId: member.userId, roleId: r.roleId })}
+                          className="ml-0.5 hover:text-red-600"
+                          title={`Remove ${r.roleName}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && (!members || members.length === 0) && (
+        <p className="text-sm text-muted-foreground">No members assigned to this project yet.</p>
+      )}
+    </div>
   )
 }
 

@@ -54,16 +54,16 @@ export function SettingsPage() {
   })
 
   const assignRole = useMutation({
-    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
-      api.post(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}`, { roleId }),
+    mutationFn: ({ userId, roleId, projectId }: { userId: string; roleId: string; projectId?: string }) =>
+      api.post(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}`, { roleId, projectId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companyMembers', companyId] })
     },
   })
 
   const removeRole = useMutation({
-    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
-      api.delete(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}&roleId=${roleId}`),
+    mutationFn: ({ userId, roleId, projectId }: { userId: string; roleId: string; projectId?: string }) =>
+      api.delete(`/api/v1/users/${userId}/role-assignments?companyId=${companyId}&roleId=${roleId}${projectId ? `&projectId=${projectId}` : ''}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companyMembers', companyId] })
     },
@@ -434,108 +434,89 @@ export function SettingsPage() {
               const isCurrentUser = currentUser?.id === member.id
               const isOwner = member.isOwner
               const canManage = !isCurrentUser && hasPermission('Members.Edit')
-              return (
-                <div key={member.id} className="flex items-center gap-4 px-4 py-3">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium ${member.isDisabled ? 'opacity-40' : ''}`}>
-                    {(member.displayName || member.email || '?').charAt(0).toUpperCase()}
-                  </div>
-                  <div className={`min-w-0 flex-1 ${member.isDisabled ? 'opacity-40' : ''}`}>
-                    <p className="truncate text-sm font-medium">
-                      {member.displayName || t('settings.noName')}
-                      {member.isDisabled && (
-                        <span className="ml-2 text-xs text-muted-foreground">({t('settings.disabled', 'Disabled')})</span>
-                      )}
-                    </p>
-                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Mail className="h-3 w-3" />
-                      {member.email}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!member.firebaseUserId && (
-                      <>
-                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                          {t('settings.pendingSignup')}
+              {
+                const companyWideRoles = member.roleAssignments?.filter(ra => ra.companyId === companyId && ra.roleId && !ra.projectId) ?? []
+                return (
+                <div key={member.id} className="px-4 py-4 space-y-3">
+                  {/* Header: avatar, name, badges, actions */}
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium ${member.isDisabled ? 'opacity-40' : ''}`}>
+                      {(member.displayName || member.email || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div className={`min-w-0 flex-1 ${member.isDisabled ? 'opacity-40' : ''}`}>
+                      <p className="truncate text-sm font-medium">
+                        {member.displayName || t('settings.noName')}
+                        {member.isDisabled && <span className="ml-2 text-xs text-muted-foreground">({t('settings.disabled', 'Disabled')})</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{member.email}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isOwner && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                          <Shield className="h-3 w-3" /> Owner
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={() => resendInvite.mutate(member.id)}
-                          disabled={resendInvite.isPending}
-                        >
-                          {resendInvite.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Mail className="mr-1 h-3 w-3" />}
-                          Resend
-                        </Button>
-                      </>
-                    )}
-                    {isOwner && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                        <Shield className="h-3 w-3" /> Owner
-                      </span>
-                    )}
-                    {member.roleAssignments?.filter(ra => ra.companyId === companyId && ra.roleId).map(ra => (
-                      <span key={`${ra.roleId}-${ra.projectId ?? 'all'}`} className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                        {ra.roleName || 'Role'}
-                        {ra.projectId && <span className="opacity-60">(project)</span>}
-                        {canManage && (
-                          <button onClick={() => removeRole.mutate({ userId: member.id, roleId: ra.roleId })} className="ml-0.5 hover:text-red-600">
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                    {canManage && !isOwner && roles && roles.length > 0 && (
-                      <select
-                        className="h-6 rounded border border-input bg-background px-1 text-xs"
-                        value=""
-                        onChange={(e) => {
-                          if (e.target.value) assignRole.mutate({ userId: member.id, roleId: e.target.value })
-                          e.target.value = ''
-                        }}
-                      >
-                        <option value="">+ Role</option>
-                        {roles.filter(r => !member.roleAssignments?.some(ra => ra.roleId === r.id && !ra.projectId)).map(r => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
-                    )}
-                    {canManage && (
-                      <>
-                        {!isOwner && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2"
-                            title="Transfer Ownership"
-                            onClick={() => setTransferTarget(member)}
-                          >
-                            <Crown className="h-3.5 w-3.5 text-purple-600" />
+                      )}
+                      {!member.firebaseUserId && (
+                        <>
+                          <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                            {t('settings.pendingSignup')}
+                          </span>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => resendInvite.mutate(member.id)} disabled={resendInvite.isPending}>
+                            {resendInvite.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Mail className="mr-1 h-3 w-3" />}
+                            Resend
                           </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2"
-                          title={member.isDisabled ? t('settings.enableMember', 'Enable') : t('settings.disableMember', 'Disable')}
-                          onClick={() => setDisableTarget(member)}
-                        >
-                          {member.isDisabled ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Ban className="h-3.5 w-3.5 text-yellow-600" />}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-2"
-                          title={t('settings.removeMember', 'Remove')}
-                          onClick={() => setDeleteTarget(member)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-red-600" />
-                        </Button>
-                      </>
-                    )}
+                        </>
+                      )}
+                      {canManage && (
+                        <>
+                          {!isOwner && (
+                            <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Transfer Ownership" onClick={() => setTransferTarget(member)}>
+                              <Crown className="h-3.5 w-3.5 text-purple-600" />
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title={member.isDisabled ? 'Enable' : 'Disable'} onClick={() => setDisableTarget(member)}>
+                            {member.isDisabled ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Ban className="h-3.5 w-3.5 text-yellow-600" />}
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0" title="Remove" onClick={() => setDeleteTarget(member)}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Company-Wide Roles */}
+                  {(!isOwner || companyWideRoles.length > 0) && (
+                  <div className="ml-12 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Company-Wide Roles</p>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      {companyWideRoles.map(ra => (
+                        <span key={`role-${ra.roleId}`} className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                          {ra.roleName || 'Role'}
+                          {canManage && (
+                            <button onClick={() => removeRole.mutate({ userId: member.id, roleId: ra.roleId })} className="ml-0.5 hover:text-red-600"><X className="h-3 w-3" /></button>
+                          )}
+                        </span>
+                      ))}
+                      {companyWideRoles.length === 0 && !canManage && (
+                        <span className="text-xs text-muted-foreground">None</span>
+                      )}
+                      {canManage && !isOwner && roles && roles.length > 0 && (
+                        <select className="h-6 rounded border border-input bg-background px-1 text-xs" value=""
+                          onChange={(e) => { if (e.target.value) assignRole.mutate({ userId: member.id, roleId: e.target.value }); e.target.value = '' }}>
+                          <option value="">+ Add Role</option>
+                          {roles.filter(r => !companyWideRoles.some(ra => ra.roleId === r.id)).map(r => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                  )}
+
                 </div>
-              )
+                )
+              }
             })}
           </div>
         )}
