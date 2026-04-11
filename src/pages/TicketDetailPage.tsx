@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X, Paperclip, FileIcon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -46,6 +46,7 @@ interface TicketMessageResponse {
   sendError?: string
   sentOnDateTime: number
   createdOnDateTime: number
+  attachments?: { id: string; fileName: string; contentType: string; sizeBytes: number }[]
 }
 
 interface TicketDetailData {
@@ -130,6 +131,12 @@ function splitQuotedText(text: string): { newContent: string; quotedContent: str
   return { newContent: text, quotedContent: null }
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 const statusColors: Record<string, string> = {
   Open: 'bg-blue-100 text-blue-800',
   Pending: 'bg-yellow-100 text-yellow-800',
@@ -184,6 +191,10 @@ export function TicketDetailPage() {
   const [showMergeConfirm, setShowMergeConfirm] = useState(false)
   const [tagInput, setTagInput] = useState('')
   const [draftStatus, setDraftStatus] = useState<'idle' | 'restored' | 'saved'>('idle')
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const lastSavedBodyRef = useRef('')
   const draftStatusTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
@@ -298,14 +309,43 @@ export function TicketDetailPage() {
   }, [companyId, ticketId, queryClient])
 
   const addMessage = useMutation({
-    mutationFn: (body: { body: string; bodyHtml?: string; isInternalNote: boolean }) =>
-      api.post(`/api/v1/companies/${companyId}/tickets/${ticketId}/messages`, body),
+    mutationFn: async (body: { body: string; bodyHtml?: string; isInternalNote: boolean }) => {
+      const hasPendingAttachments = pendingFiles.length > 0
+      const msg = await api.post<TicketMessageResponse>(
+        `/api/v1/companies/${companyId}/tickets/${ticketId}/messages`,
+        { ...body, hasPendingAttachments }
+      )
+
+      // Upload pending files as attachments, then trigger send
+      if (hasPendingAttachments) {
+        setUploading(true)
+        for (const file of pendingFiles) {
+          try {
+            setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
+            await api.upload(
+              `/api/v1/companies/${companyId}/tickets/${ticketId}/messages/${msg.id}/attachments`,
+              file,
+              (percent) => setUploadProgress((prev) => ({ ...prev, [file.name]: percent }))
+            )
+          } catch (err) {
+            console.error('Failed to upload attachment:', file.name, err)
+          }
+        }
+        // All attachments uploaded — now trigger the email send
+        await api.post(`/api/v1/companies/${companyId}/tickets/${ticketId}/messages/${msg.id}/send`)
+        setUploading(false)
+        setUploadProgress({})
+      }
+
+      return msg
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket', companyId, ticketId] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
       queryClient.invalidateQueries({ queryKey: ['ticketBadgeCount'] })
       setReplyBody('')
       setReplyHtml('')
+      setPendingFiles([])
       setEditorKey((k) => k + 1)
       deleteDraft()
       setDraftStatus('idle')
@@ -953,6 +993,36 @@ export function TicketDetailPage() {
                 </>
               )
             })()}
+            {msg.attachments && msg.attachments.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {msg.attachments.map((att) => (
+                  <button
+                    key={att.id}
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const blob = await api.downloadBlob(
+                          `/api/v1/companies/${companyId}/tickets/${ticketId}/messages/${msg.id}/attachments/${att.id}`
+                        )
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = att.fileName
+                        a.click()
+                        URL.revokeObjectURL(url)
+                      } catch (err) {
+                        console.error('Download failed:', err)
+                      }
+                    }}
+                    className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2.5 py-1.5 text-xs hover:bg-muted transition-colors"
+                  >
+                    <Paperclip className="h-3 w-3 text-muted-foreground" />
+                    <span className="max-w-[200px] truncate">{att.fileName}</span>
+                    <span className="text-muted-foreground">({formatFileSize(att.sizeBytes)})</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -1042,10 +1112,59 @@ export function TicketDetailPage() {
                 className={isInternalNote ? 'border-yellow-300 bg-yellow-50/50 dark:border-yellow-900 dark:bg-yellow-900/10' : ''}
               />
             </div>
+
+            {/* Pending attachments */}
+            {pendingFiles.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {pendingFiles.map((file, i) => (
+                  <div key={`${file.name}-${i}`} className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2.5 py-1.5 text-xs">
+                    <FileIcon className="h-3 w-3 text-muted-foreground" />
+                    <span className="max-w-[200px] truncate">{file.name}</span>
+                    <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                    {uploadProgress[file.name] !== undefined && uploadProgress[file.name] < 100 && (
+                      <span className="text-muted-foreground">{uploadProgress[file.name]}%</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="ml-1 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
-              <Button type="submit" disabled={addMessage.isPending || !replyBody.trim()} size="sm">
-                {addMessage.isPending && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              <Button type="submit" disabled={addMessage.isPending || uploading || !replyBody.trim()} size="sm">
+                {(addMessage.isPending || uploading) && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
                 {isInternalNote ? t('ticketDetail.addNote') : t('ticketDetail.sendReply')}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  const valid = files.filter((f) => f.size <= 10 * 1024 * 1024)
+                  if (valid.length < files.length) {
+                    alert('Some files exceed the 10MB limit and were not added.')
+                  }
+                  setPendingFiles((prev) => [...prev, ...valid])
+                  e.target.value = ''
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={addMessage.isPending || uploading}
+              >
+                <Paperclip className="mr-1.5 h-3.5 w-3.5" />
+                {t('ticketDetail.attach', 'Attach')}
               </Button>
               {draftStatus === 'saved' && (
                 <span className="text-xs text-muted-foreground animate-in fade-in duration-300">

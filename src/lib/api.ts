@@ -76,6 +76,57 @@ class ApiClient {
   delete<T>(path: string) {
     return this.request<T>(path, { method: 'DELETE' })
   }
+
+  async downloadBlob(path: string): Promise<Blob> {
+    const url = `${this.getBaseUrl()}${path}`
+    const headers: Record<string, string> = {}
+    if (this.getToken) {
+      const token = await this.getToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    }
+    const response = await fetch(url, { headers })
+    if (!response.ok) throw new ApiError(response.status, 'Download failed')
+    return response.blob()
+  }
+
+  async upload<T>(path: string, file: File, onProgress?: (percent: number) => void): Promise<T> {
+    const url = `${this.getBaseUrl()}${path}`
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const headers: Record<string, string> = {}
+    if (this.getToken) {
+      const token = await this.getToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    }
+
+    return new Promise<T>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', url)
+      Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v))
+
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+        }
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText))
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText)
+            reject(new ApiError(xhr.status, err.message || 'Upload failed'))
+          } catch {
+            reject(new ApiError(xhr.status, 'Upload failed'))
+          }
+        }
+      }
+      xhr.onerror = () => reject(new ApiError(0, 'Network error'))
+      xhr.send(formData)
+    })
+  }
 }
 
 export class ApiError extends Error {

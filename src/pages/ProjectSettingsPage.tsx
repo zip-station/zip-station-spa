@@ -72,6 +72,12 @@ interface ProjectDetailResponse {
       signatureHtml: string
       allowUserOverride: boolean
     }
+    fileStorage?: {
+      bucketName: string
+      endpoint: string
+      region: string
+      hasCredentials?: boolean
+    }
   }
 }
 
@@ -152,6 +158,13 @@ export function ProjectSettingsPage() {
   const [arSubject, setArSubject] = useState('Re: {TicketSubject}')
   const [arBody, setArBody] = useState('<p>Hi {CustomerName},</p><p>We\'ve received your message and created ticket <strong>{TicketId}</strong>. Our team will get back to you shortly.</p><p>Thanks,<br/>{ProjectName} Support</p>')
 
+  // File Storage (Backblaze B2)
+  const [fsKeyId, setFsKeyId] = useState('')
+  const [fsAppKey, setFsAppKey] = useState('')
+  const [fsBucketName, setFsBucketName] = useState('')
+  const [fsEndpoint, setFsEndpoint] = useState('')
+  const [fsRegion, setFsRegion] = useState('')
+
   // Assignment
   const [assignmentMode, setAssignmentMode] = useState<string>('Manual')
 
@@ -212,6 +225,11 @@ export function ProjectSettingsPage() {
         setSigEnabled(s.emailSignature.enabled)
         setSigHtml(s.emailSignature.signatureHtml)
         setSigAllowUserOverride(s.emailSignature.allowUserOverride)
+      }
+      if (s.fileStorage) {
+        setFsBucketName(s.fileStorage.bucketName)
+        setFsEndpoint(s.fileStorage.endpoint)
+        setFsRegion(s.fileStorage.region)
       }
     }
   }, [project])
@@ -304,6 +322,17 @@ export function ProjectSettingsPage() {
       enabled: sigEnabled,
       signatureHtml: sigHtml,
       allowUserOverride: sigAllowUserOverride,
+    }
+
+    // Only send file storage if bucket name is filled
+    if (fsBucketName) {
+      data.fileStorage = {
+        keyId: fsKeyId,
+        appKey: fsAppKey,
+        bucketName: fsBucketName,
+        endpoint: fsEndpoint,
+        region: fsRegion,
+      }
     }
 
     updateSettings.mutate(data)
@@ -695,6 +724,39 @@ export function ProjectSettingsPage() {
                   <p className="text-xs text-muted-foreground">{t('projectSettings.smtpFromEmailHelp')}</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* File Storage (Backblaze B2) */}
+        <div className="rounded-lg border bg-card p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold">{t('projectSettings.fileStorageTitle', 'File Storage')}</h3>
+            <p className="text-sm text-muted-foreground">{t('projectSettings.fileStorageDesc', 'Configure Backblaze B2 storage for email attachments. Credentials are encrypted at rest.')}</p>
+          </div>
+          {project?.settings?.fileStorage?.hasCredentials && !fsKeyId && (
+            <p className="mb-3 text-sm text-green-600">{t('projectSettings.fileStorageConfigured', 'Credentials saved. Leave blank to keep existing.')}</p>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('projectSettings.fsEndpoint', 'S3 Endpoint')}</label>
+              <Input value={fsEndpoint} onChange={(e) => setFsEndpoint(e.target.value)} placeholder="https://s3.us-west-004.backblazeb2.com" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('projectSettings.fsRegion', 'Region')}</label>
+              <Input value={fsRegion} onChange={(e) => setFsRegion(e.target.value)} placeholder="us-west-004" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('projectSettings.fsBucketName', 'Bucket Name')}</label>
+              <Input value={fsBucketName} onChange={(e) => setFsBucketName(e.target.value)} placeholder="my-bucket" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('projectSettings.fsKeyId', 'Key ID')}</label>
+              <PasswordInput value={fsKeyId} onChange={(e) => setFsKeyId(e.target.value)} placeholder={project?.settings?.fileStorage?.hasCredentials ? 'Saved' : 'Key ID'} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium">{t('projectSettings.fsAppKey', 'Application Key')}</label>
+              <PasswordInput value={fsAppKey} onChange={(e) => setFsAppKey(e.target.value)} placeholder={project?.settings?.fileStorage?.hasCredentials ? 'Saved' : 'Application Key'} />
             </div>
           </div>
         </div>
