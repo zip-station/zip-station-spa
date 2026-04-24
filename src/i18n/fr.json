@@ -27,6 +27,7 @@
   "nav": {
     "dashboard": "Tableau de bord",
     "tickets": "Tickets",
+    "kanban": "Kanban",
     "intake": "Réception",
     "customers": "Clients",
     "projects": "Projets",
@@ -279,6 +280,9 @@
     "staleTicketThreshold": "Seuil de ticket inactif",
     "staleTicketDays": "jours",
     "staleTicketDesc": "Les tickets au statut \"En attente\" sans réponse pendant ce nombre de jours seront signalés comme inactifs.",
+    "kanbanArchiveThreshold": "Seuil d'archivage Kanban",
+    "kanbanArchiveDays": "jours",
+    "kanbanArchiveDesc": "Les cartes dans la colonne résolue plus anciennes que ce nombre de jours sont masquées par défaut. Utilisez le filtre \"Afficher archivées\" pour les voir.",
     "emailDesc": "Configurez comment Zip Station envoie et reçoit les e-mails pour ce projet. Vous aurez besoin de SMTP (pour envoyer des réponses) et d'IMAP (pour recevoir les e-mails entrants).",
     "imapIncoming": "IMAP — E-mail entrant (reçoit les e-mails des clients)",
     "imapIncomingBadge": "ENT",

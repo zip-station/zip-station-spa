@@ -19,6 +19,8 @@ import { CustomerDetailPage } from '@/pages/CustomerDetailPage'
 import { AlertsPage } from '@/pages/AlertsPage'
 import { ReportsPage } from '@/pages/ReportsPage'
 import { RolesPage } from '@/pages/RolesPage'
+import { KanbanPage } from '@/pages/KanbanPage'
+import { KanbanCardDetailPage } from '@/pages/KanbanCardDetailPage'
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -119,6 +121,21 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 })
 
+const kanbanRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/kanban',
+  component: KanbanPage,
+})
+
+const kanbanCardDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/kanban/stories/$storyNumber',
+  component: KanbanCardDetailPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    fromTicket: typeof search.fromTicket === 'string' ? search.fromTicket : undefined,
+  }),
+})
+
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   ticketsRoute,
@@ -134,6 +151,8 @@ const routeTree = rootRoute.addChildren([
   reportsRoute,
   projectSettingsRoute,
   settingsRoute,
+  kanbanRoute,
+  kanbanCardDetailRoute,
 ])
 
 export const router = createRouter({ routeTree })

@@ -27,6 +27,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
+    "kanban": "Kanban",
     "intake": "Intake",
     "customers": "Customers",
     "projects": "Projects",
@@ -282,6 +283,9 @@
     "staleTicketThreshold": "Stale Ticket Threshold",
     "staleTicketDays": "days",
     "staleTicketDesc": "Tickets in \"Pending\" status with no reply for this many days will be flagged as stale.",
+    "kanbanArchiveThreshold": "Kanban Archive Threshold",
+    "kanbanArchiveDays": "days",
+    "kanbanArchiveDesc": "Cards in the resolved column older than this are hidden by default. Use the \"Show archived\" filter to see them.",
     "emailDesc": "Configure how Zip Station sends and receives email for this project. You'll need both SMTP (for sending replies) and IMAP (for receiving incoming emails).",
     "imapIncoming": "IMAP — Incoming Email (receives emails from customers)",
     "imapIncomingBadge": "IN",

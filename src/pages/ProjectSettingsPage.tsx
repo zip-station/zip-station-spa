@@ -24,6 +24,7 @@ interface ProjectDetailResponse {
     defaultLanguage?: string
     allowUserLanguageOverride: boolean
     staleTicketDays?: number
+    kanbanArchiveDays?: number
     smtp?: {
       host: string
       port: number
@@ -127,6 +128,7 @@ export function ProjectSettingsPage() {
 
   // Stale ticket threshold
   const [staleTicketDays, setStaleTicketDays] = useState(5)
+  const [kanbanArchiveDays, setKanbanArchiveDays] = useState(3)
 
   // IMAP settings (incoming)
   const [imapHost, setImapHost] = useState('')
@@ -203,6 +205,7 @@ export function ProjectSettingsPage() {
         setImapUseSsl(s.imap.useSsl)
       }
       if (s.staleTicketDays) setStaleTicketDays(s.staleTicketDays)
+      if (s.kanbanArchiveDays != null) setKanbanArchiveDays(s.kanbanArchiveDays)
       if (s.spam) {
         setSpamAutoDenyEnabled(s.spam.autoDenyEnabled)
         setSpamAutoDenyThreshold(s.spam.autoDenyThreshold)
@@ -317,6 +320,7 @@ export function ProjectSettingsPage() {
     }
 
     data.staleTicketDays = staleTicketDays
+    data.kanbanArchiveDays = kanbanArchiveDays
 
     data.emailSignature = {
       enabled: sigEnabled,
@@ -614,6 +618,22 @@ export function ProjectSettingsPage() {
               <span className="text-sm text-muted-foreground">{t('projectSettings.staleTicketDays')}</span>
             </div>
             <p className="text-xs text-muted-foreground">{t('projectSettings.staleTicketDesc')}</p>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <label className="text-sm font-medium">{t('projectSettings.kanbanArchiveThreshold')}</label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                max={90}
+                value={kanbanArchiveDays}
+                onChange={(e) => setKanbanArchiveDays(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-20"
+              />
+              <span className="text-sm text-muted-foreground">{t('projectSettings.kanbanArchiveDays')}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">{t('projectSettings.kanbanArchiveDesc')}</p>
           </div>
         </div>
 

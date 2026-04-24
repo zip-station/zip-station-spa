@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X, Paperclip, FileIcon } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X, Paperclip, FileIcon, Pin, PinOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { copyToClipboard } from '@/lib/utils'
 import type { UserResponse } from '@/types/api'
+import { LinkedStoriesSection } from '@/components/Kanban/LinkedStoriesSection'
 
 interface TicketResponse {
   id: string
@@ -28,6 +29,7 @@ interface TicketResponse {
   linkedTicketIds: string[]
   mergedIntoTicketId?: string
   creationSource?: 'Manual' | 'IntakeManual' | 'IntakeAutoRule' | 'DirectApi'
+  isPreserved?: boolean
   createdOnDateTime: number
   updatedOnDateTime: number
 }
@@ -405,6 +407,15 @@ export function TicketDetailPage() {
     },
   })
 
+  const updatePreserve = useMutation({
+    mutationFn: (isPreserved: boolean) =>
+      api.patch(`/api/v1/companies/${companyId}/tickets/${ticketId}/preserve`, { isPreserved }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', companyId, ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    },
+  })
+
   const updateTags = useMutation({
     mutationFn: (tags: string[]) =>
       api.patch(`/api/v1/companies/${companyId}/tickets/${ticketId}/tags`, { tags }),
@@ -634,7 +645,26 @@ export function TicketDetailPage() {
               </div>
             )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {hasPermission('Tickets.Edit') && (ticket.status === 'Open' || ticket.status === 'Pending') && (
+              <Button
+                size="sm"
+                variant={ticket.isPreserved ? 'default' : 'outline'}
+                onClick={() => updatePreserve.mutate(!ticket.isPreserved)}
+                disabled={updatePreserve.isPending}
+                title={
+                  ticket.isPreserved
+                    ? 'This ticket is preserved and will not be auto-archived for inactivity. Click to remove preservation.'
+                    : 'Preserve this ticket so it stays open indefinitely. It will not be auto-archived after the stale-ticket threshold.'
+                }
+              >
+                {ticket.isPreserved ? (
+                  <><Pin className="mr-1.5 h-3.5 w-3.5 fill-current" /> Preserved</>
+                ) : (
+                  <><PinOff className="mr-1.5 h-3.5 w-3.5" /> Preserve</>
+                )}
+              </Button>
+            )}
             {hasPermission('Tickets.Edit') && (ticket.status === 'Open' || ticket.status === 'Pending') && (
               <>
                 <Button
@@ -712,7 +742,7 @@ export function TicketDetailPage() {
                 </Button>
               </>
             )}
-            {hasPermission('Tickets.Edit') && ticket.status === 'Closed' && (
+            {hasPermission('Tickets.Edit') && (ticket.status === 'Closed' || ticket.status === 'Abandoned') && (
               <Button
                 size="sm"
                 variant="outline"
@@ -740,8 +770,8 @@ export function TicketDetailPage() {
         </p>
       </div>
 
-      {/* Tags & Linked Tickets */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+      {/* Tags & Linked Tickets & Linked Stories */}
+      <div className="mb-6 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(300px,1fr))]">
         {/* Tags */}
         <div className="rounded-lg border bg-card p-4">
           <h3 className="flex items-center gap-2 text-sm font-semibold mb-3">
@@ -882,6 +912,14 @@ export function TicketDetailPage() {
             <p className="text-sm text-muted-foreground">No linked tickets.</p>
           )}
         </div>
+
+        {companyId && (
+          <LinkedStoriesSection
+            companyId={companyId}
+            ticketId={ticket.id}
+            canEdit={hasPermission('Kanban.Edit')}
+          />
+        )}
       </div>
 
       {/* Messages */}
