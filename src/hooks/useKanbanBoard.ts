@@ -126,6 +126,19 @@ export function useAddKanbanComment(companyId: string | null, projectId: string 
   })
 }
 
+export function useDeleteKanbanComment(companyId: string | null, projectId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { cardId: string; commentId: string }) =>
+      api.delete<void>(
+        `${boardPath(companyId!, projectId!)}/cards/${params.cardId}/comments/${params.commentId}`,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['kanbanCardDetail', companyId, projectId] })
+    },
+  })
+}
+
 export function useLinkTicket(companyId: string | null, projectId: string | null) {
   const qc = useQueryClient()
   return useMutation({

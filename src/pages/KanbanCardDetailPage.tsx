@@ -15,6 +15,7 @@ import {
   useUpdateKanbanCard,
   useDeleteKanbanCard,
   useAddKanbanComment,
+  useDeleteKanbanComment,
   useLinkTicket,
   useUnlinkTicket,
 } from '@/hooks/useKanbanBoard'
@@ -55,6 +56,7 @@ export function KanbanCardDetailPage() {
   })
 
   const updateCard = useUpdateKanbanCard(companyId, selectedProjectId)
+  const deleteComment = useDeleteKanbanComment(companyId, selectedProjectId)
 
   const uploadImage = useMemo(
     () =>
@@ -246,7 +248,14 @@ export function KanbanCardDetailPage() {
                   <p className="text-xs text-muted-foreground">No comments yet.</p>
                 ) : (
                   detail.comments.map((c) => (
-                    <CommentItem key={c.id} comment={c} authorName={c.authorUserId ? userNamesById.get(c.authorUserId) : undefined} />
+                    <CommentItem
+                      key={c.id}
+                      comment={c}
+                      authorName={c.authorUserId ? userNamesById.get(c.authorUserId) : undefined}
+                      canDelete={canEdit && c.type !== 'System'}
+                      onDelete={() => deleteComment.mutate({ cardId: card.id, commentId: c.id })}
+                      isDeleting={deleteComment.isPending}
+                    />
                   ))
                 )}
               </div>
@@ -423,17 +432,62 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function CommentItem({ comment, authorName }: { comment: KanbanCardCommentResponse; authorName?: string }) {
+function CommentItem({
+  comment,
+  authorName,
+  canDelete,
+  onDelete,
+  isDeleting,
+}: {
+  comment: KanbanCardCommentResponse
+  authorName?: string
+  canDelete?: boolean
+  onDelete?: () => void
+  isDeleting?: boolean
+}) {
+  const [confirming, setConfirming] = useState(false)
   const isSystem = comment.type === 'System'
   const date = new Date(comment.createdOnDateTime).toLocaleString()
 
   return (
-    <div className={`rounded-md border px-3 py-2 text-sm ${isSystem ? 'bg-muted/30 italic' : 'bg-background'}`}>
+    <div className={`group rounded-md border px-3 py-2 text-sm ${isSystem ? 'bg-muted/30 italic' : 'bg-background'}`}>
       <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
         <span className="font-medium">
           {isSystem ? 'System' : authorName ?? 'Someone'}
         </span>
         <span>{date}</span>
+        {canDelete && (
+          <div className="ml-auto">
+            {!confirming ? (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                title="Delete comment"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => { onDelete?.(); setConfirming(false) }}
+                  disabled={isDeleting}
+                  className="rounded px-2 py-0.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="rounded px-2 py-0.5 text-xs hover:bg-accent"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div
         className="prose prose-sm max-w-none dark:prose-invert"

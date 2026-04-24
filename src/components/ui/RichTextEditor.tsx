@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import type { Extensions } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
@@ -121,6 +121,14 @@ export function RichTextEditor({ content, onChange, onSubmit, placeholder, class
       alert(`Image upload failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
     }
   }
+
+  // Sync external content changes (e.g., when the detail query resolves after
+  // the editor has already mounted) into the editor without emitting updates.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    if (content === editor.getHTML()) return
+    editor.commands.setContent(content, { emitUpdate: false })
+  }, [editor, content])
 
   // Create the file input outside the React tree entirely, so the dialog
   // can't interact with the editor's contentEditable focus management.

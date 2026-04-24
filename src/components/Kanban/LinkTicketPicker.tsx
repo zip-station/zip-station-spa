@@ -46,34 +46,46 @@ export function LinkTicketPicker({ linkedTickets, onAdd, onRemove, disabled }: L
           {linkedTickets.map((t) => (
             <li
               key={t.id}
-              className="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 text-sm"
+              className="rounded-md border bg-background px-3 py-2 text-sm"
             >
-              <Link
-                to="/tickets/$ticketId"
-                params={{ ticketId: t.id }}
-                className="min-w-0 flex-1 hover:underline"
-              >
-                <span className="font-mono text-xs text-muted-foreground">#{t.ticketNumber}</span>{' '}
-                <span className="truncate">{t.subject}</span>
-              </Link>
-              <Link
-                to="/tickets/$ticketId"
-                params={{ ticketId: t.id }}
-                className="text-muted-foreground hover:text-foreground"
-                title="Open ticket"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Link>
-              {!disabled && (
-                <button
-                  type="button"
-                  onClick={() => onRemove(t.id)}
-                  className="text-muted-foreground hover:text-destructive"
-                  title="Unlink"
+              <div className="flex items-center justify-between gap-2">
+                <Link
+                  to="/tickets/$ticketId"
+                  params={{ ticketId: t.id }}
+                  className="font-mono text-xs text-muted-foreground hover:text-foreground hover:underline"
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+                  #{t.ticketNumber}
+                </Link>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    to="/tickets/$ticketId"
+                    params={{ ticketId: t.id }}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Open ticket in new tab"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                  {!disabled && (
+                    <button
+                      type="button"
+                      onClick={() => onRemove(t.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                      title="Unlink"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <Link
+                to="/tickets/$ticketId"
+                params={{ ticketId: t.id }}
+                className="mt-0.5 block text-sm hover:underline"
+              >
+                {t.subject}
+              </Link>
             </li>
           ))}
         </ul>
