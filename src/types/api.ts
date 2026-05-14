@@ -148,3 +148,64 @@ export interface UpdateKanbanColumnsRequest {
   columns: Array<{ id?: string; name: string; color?: string }>
   resolvedColumnId: string
 }
+
+export type MaxInstructionContext = 'enrichment' | 'reply' | 'code' | 'chat' | 'all'
+
+export interface MaxSettings {
+  enabled: boolean
+  apiKeySet: boolean
+  model: string
+  projectContext?: string
+  toneGuide?: string
+  toneAvoid?: string
+  autoSendEnabled: boolean
+  autoSendThreshold: number
+  autoSendCategories: string[]
+}
+
+export interface MaxInstructionResponse {
+  id: string
+  companyId: string
+  projectId: string
+  instruction: string
+  contexts: string[]
+  source: string
+  createdOnDateTime: number
+  updatedOnDateTime: number
+}
+
+export interface MaxInstructionRequest {
+  instruction: string
+  contexts: string[]
+}
+
+export interface MaxExampleReplyResponse {
+  id: string
+  companyId: string
+  projectId: string
+  replyText: string
+  sourceTicketId?: string
+  notes?: string
+  createdOnDateTime: number
+  updatedOnDateTime: number
+}
+
+export interface MaxExampleReplyRequest {
+  replyText: string
+  sourceTicketId?: string
+  notes?: string
+}
+
+export interface MaxTestConnectionRequest {
+  apiKey?: string
+  model?: string
+}
+
+export interface MaxTestConnectionResponse {
+  success: boolean
+  message: string
+}
+
+export interface SetMaxApiKeyRequest {
+  apiKey: string
+}
