@@ -727,7 +727,7 @@ function InstructionsSection({ companyId, projectId, canEdit }: { companyId: str
         {instructions.map((inst) => (
           <div key={inst.id} className="flex items-start justify-between gap-3 p-3">
             <div className="flex-1 space-y-1">
-              <p className="text-sm">{inst.instruction}</p>
+              <p className="text-sm line-clamp-1" title={inst.instruction}>{inst.instruction}</p>
               <div className="flex flex-wrap gap-1">
                 {inst.contexts.map((c) => (
                   <span key={c} className="rounded-full bg-muted px-2 py-0.5 text-xs">

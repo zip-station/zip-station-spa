@@ -209,3 +209,67 @@ export interface MaxTestConnectionResponse {
 export interface SetMaxApiKeyRequest {
   apiKey: string
 }
+
+export type MaxCategory = 'how_to' | 'bug' | 'feature_request' | 'billing' | 'account' | 'feedback' | 'spam' | 'unsure'
+export type MaxActionType = 'draft_reply' | 'investigate' | 'merge_duplicate' | 'add_to_backlog' | 'no_action' | 'escalated' | 'flagged_question'
+export type MaxTaskStatus = 'pending' | 'approved' | 'rejected' | 'auto_executed' | 'failed'
+
+export interface MaxTicketEnrichmentResponse {
+  id: string
+  ticketId: string
+  status: string
+  category: string
+  summary: string
+  confidence: number
+  duplicateOfTicketId?: string
+  relatedTicketIds: string[]
+  platform: string
+  tags: string[]
+  suggestedActionType: string
+  suggestedDraft?: string
+  suggestedNotes?: string
+  reasoning?: string
+  flaggedQuestion: boolean
+  questionId?: string
+  model: string
+  createdOnDateTime: number
+  updatedOnDateTime: number
+}
+
+export interface MaxTaskDetailsResponse {
+  draft?: string
+  notes?: string
+  duplicateOfTicketId?: string
+  suggestedTitle?: string
+  suggestedKanbanType?: string
+  questionId?: string
+}
+
+export interface MaxTaskResponse {
+  id: string
+  ticketId: string
+  type: string
+  status: string
+  confidence: number
+  details: MaxTaskDetailsResponse
+  createdOnDateTime: number
+  resolvedOnDateTime?: number
+}
+
+export interface MaxQuestionResponse {
+  id: string
+  sourceTicketId?: string
+  question: string
+  contextExcerpt?: string
+  status: string
+  answer?: string
+  promotedToContext: boolean
+  createdOnDateTime: number
+  answeredOnDateTime?: number
+}
+
+export interface TicketMaxResponse {
+  enrichment: MaxTicketEnrichmentResponse | null
+  tasks: MaxTaskResponse[]
+  questions: MaxQuestionResponse[]
+}

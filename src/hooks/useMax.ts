@@ -8,7 +8,9 @@ import type {
   MaxSettings,
   MaxTestConnectionRequest,
   MaxTestConnectionResponse,
+  MaxTicketEnrichmentResponse,
   SetMaxApiKeyRequest,
+  TicketMaxResponse,
 } from '@/types/api'
 
 const base = (companyId: string, projectId: string) =>
@@ -131,6 +133,37 @@ export function useResetMax(companyId: string | null, projectId: string | null) 
       queryClient.invalidateQueries({ queryKey: ['project', companyId, projectId] })
       queryClient.invalidateQueries({ queryKey: instructionsKey(companyId, projectId) })
       queryClient.invalidateQueries({ queryKey: exampleRepliesKey(companyId, projectId) })
+    },
+  })
+}
+
+const ticketMaxKey = (companyId: string | null, ticketId: string | null) =>
+  ['max', 'ticket', companyId, ticketId] as const
+
+export function useTicketMax(companyId: string | null, ticketId: string | null) {
+  return useQuery({
+    queryKey: ticketMaxKey(companyId, ticketId),
+    queryFn: () =>
+      api.get<TicketMaxResponse>(`/api/v1/companies/${companyId}/tickets/${ticketId}/max`),
+    enabled: !!companyId && !!ticketId,
+    // Poll while enrichment is in flight so the UI lights up automatically
+    // when Max finishes. Stop polling once it's complete or failed.
+    refetchInterval: (query) => {
+      const data = query.state.data as TicketMaxResponse | undefined
+      return data?.enrichment?.status === 'processing' ? 3000 : false
+    },
+  })
+}
+
+export function useReenrichTicket(companyId: string | null, ticketId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.post<MaxTicketEnrichmentResponse>(
+        `/api/v1/companies/${companyId}/tickets/${ticketId}/max/enrich`,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketMaxKey(companyId, ticketId) })
     },
   })
 }

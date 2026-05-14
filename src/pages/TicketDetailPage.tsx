@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X, Paperclip, FileIcon, Pin, PinOff } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X, Paperclip, FileIcon, Pin, PinOff, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -13,6 +13,8 @@ import { api } from '@/lib/api'
 import { copyToClipboard } from '@/lib/utils'
 import type { UserResponse } from '@/types/api'
 import { LinkedStoriesSection } from '@/components/Kanban/LinkedStoriesSection'
+import { MaxInlinePanel } from '@/components/Max/MaxInlinePanel'
+import { useTicketMax, useReenrichTicket } from '@/hooks/useMax'
 
 interface TicketResponse {
   id: string
@@ -139,6 +141,22 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// Convert plain-text from Max into TipTap-friendly HTML. Paragraph breaks come
+// from blank lines (\n\n+); single newlines within a paragraph become <br>.
+// Between content paragraphs we insert a real empty paragraph — that's the
+// blank line, both in the editor structure and in the resulting plain text.
+function plainTextToHtml(text: string): string {
+  if (!text.trim()) return ''
+  const paragraphs = text.split(/\n\s*\n+/).filter((p) => p.length > 0)
+  return paragraphs
+    .map((p) => `<p>${p.split('\n').map(escapeHtml).join('<br>')}</p>`)
+    .join('<p></p>')
+}
+
 const statusColors: Record<string, string> = {
   Open: 'bg-blue-100 text-blue-800',
   Pending: 'bg-yellow-100 text-yellow-800',
@@ -236,7 +254,7 @@ export function TicketDetailPage() {
   const { data: draftData } = useQuery({
     queryKey: ['ticketDraft', companyId, ticketId],
     queryFn: () =>
-      api.get<{ exists: boolean; body?: string; bodyHtml?: string; isInternalNote?: boolean }>(
+      api.get<{ exists: boolean; body?: string; bodyHtml?: string; isInternalNote?: boolean; isAiDraft?: boolean }>(
         `/api/v1/companies/${companyId}/tickets/${ticketId}/draft`
       ),
     enabled: !!companyId && !!ticketId,
@@ -251,12 +269,66 @@ export function TicketDetailPage() {
       setReplyBody(draftData.body ?? '')
       setReplyHtml(draftData.bodyHtml ?? '')
       setIsInternalNote(draftData.isInternalNote ?? false)
+      setIsAiDraft(draftData.isAiDraft ?? false)
       lastSavedBodyRef.current = draftData.body ?? ''
       setEditorKey((k) => k + 1)
       setDraftStatus('restored')
       draftStatusTimerRef.current = setTimeout(() => setDraftStatus('idle'), 3000)
     }
   }, [draftData])
+
+  // Max draft: prefill the reply composer with Max's drafted reply when there is
+  // no saved user draft. The badge stays until the user clears the composer or sends.
+  const { data: maxData } = useTicketMax(companyId, ticketId)
+  const reenrich = useReenrichTicket(companyId, ticketId)
+  const aiPrefillRef = useRef(false)
+  const [isAiDraft, setIsAiDraft] = useState(false)
+
+  const draftToEditor = (draftText: string) => {
+    setReplyBody(draftText)
+    setReplyHtml(plainTextToHtml(draftText))
+    setEditorKey((k) => k + 1)
+    setIsAiDraft(true)
+  }
+
+  const handleRegenerateWithMax = () => {
+    reenrich.mutate(undefined, {
+      onSuccess: (enrichment) => {
+        if (enrichment.suggestedDraft) {
+          draftToEditor(enrichment.suggestedDraft)
+        }
+      },
+    })
+  }
+
+  useEffect(() => {
+    if (aiPrefillRef.current) return
+    if (!draftData || !maxData) return
+    if (draftData.exists) {
+      // User has a saved draft — respect it.
+      aiPrefillRef.current = true
+      return
+    }
+    // If Max is still processing, wait — the polling in useTicketMax will fire
+    // this effect again once enrichment completes and tasks land.
+    if (maxData.enrichment?.status === 'processing') return
+    const draftReplyTask = maxData.tasks.find((t) => t.type === 'draft_reply' && t.status === 'pending')
+    const draftText = draftReplyTask?.details.draft
+    if (!draftText) return
+    if (replyBody.trim() !== '') {
+      // User started typing before Max's draft arrived — don't overwrite.
+      aiPrefillRef.current = true
+      return
+    }
+    aiPrefillRef.current = true
+    draftToEditor(draftText)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftData, maxData])
+
+  // Clear the AI badge if the user empties the composer.
+  useEffect(() => {
+    if (isAiDraft && replyBody.trim() === '') setIsAiDraft(false)
+  }, [replyBody, isAiDraft])
 
   // Draft: auto-save every 5 seconds
   const showDraftSaved = useCallback(() => {
@@ -279,12 +351,13 @@ export function TicketDetailPage() {
           body: replyBody,
           bodyHtml: replyHtml || undefined,
           isInternalNote,
+          isAiDraft,
         }, { signal: controller.signal })
         .then(() => { if (!controller.signal.aborted) showDraftSaved() })
         .catch(() => {})
     }, 5000)
     return () => clearInterval(interval)
-  }, [companyId, ticketId, replyBody, replyHtml, isInternalNote, showDraftSaved])
+  }, [companyId, ticketId, replyBody, replyHtml, isInternalNote, isAiDraft, showDraftSaved])
 
   // Draft: cleanup timer on unmount
   useEffect(() => {
@@ -782,6 +855,11 @@ export function TicketDetailPage() {
         </p>
       </div>
 
+      {/* Max enrichment */}
+      {hasPermission('Max.View') && companyId && (
+        <MaxInlinePanel companyId={companyId} ticketId={ticketId} />
+      )}
+
       {/* Tags & Linked Tickets & Linked Stories */}
       <div className="mb-6 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(300px,1fr))]">
         {/* Tags */}
@@ -1145,7 +1223,7 @@ export function TicketDetailPage() {
           </div>
 
           <form onSubmit={handleSendReply}>
-            <div className="mb-3">
+            <div className="mb-3 relative">
               <RichTextEditor
                 key={editorKey}
                 content={replyHtml}
@@ -1161,6 +1239,28 @@ export function TicketDetailPage() {
                 placeholder={isInternalNote ? t('ticketDetail.notePlaceholder') : t('ticketDetail.replyPlaceholder')}
                 className={isInternalNote ? 'border-yellow-300 bg-yellow-50/50 dark:border-yellow-900 dark:bg-yellow-900/10' : ''}
               />
+              {isAiDraft && (
+                <span
+                  className="pointer-events-none absolute bottom-2 right-12 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary shadow-sm border border-primary/20"
+                  title={t('ticketDetail.aiDraftedTooltip', 'This reply was drafted by Max. Edit before sending.')}
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                  {t('ticketDetail.aiGenerated', 'AI generated')}
+                </span>
+              )}
+              {maxData?.enrichment && (
+                <button
+                  type="button"
+                  onClick={handleRegenerateWithMax}
+                  disabled={reenrich.isPending}
+                  className="absolute bottom-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary/20 bg-background text-primary shadow-sm hover:bg-primary/10 disabled:opacity-50 transition-colors"
+                  title={t('ticketDetail.regenerateWithMax', isAiDraft ? 'Regenerate with Max' : 'Draft with Max')}
+                >
+                  {reenrich.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Sparkles className="h-3.5 w-3.5" />}
+                </button>
+              )}
             </div>
 
             {/* Pending attachments */}
