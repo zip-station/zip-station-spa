@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Loader2, Save, AlertTriangle, Key, Copy, Trash2, Plus, Users, Shield, X } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, AlertTriangle, Key, Copy, Trash2, Plus, Users, Shield, X, Settings, Mail, Inbox, HardDrive } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { copyToClipboard } from '@/lib/utils'
@@ -169,6 +169,9 @@ export function ProjectSettingsPage() {
 
   // Assignment
   const [assignmentMode, setAssignmentMode] = useState<string>('Manual')
+
+  type SettingsTab = 'general' | 'email' | 'intake' | 'storage' | 'members'
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
 
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -450,9 +453,39 @@ export function ProjectSettingsPage() {
       {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
       {saved && <Toast message={t('projectSettings.saved')} type="success" onClose={() => setSaved(false)} />}
 
+      {/* Tabs */}
+      <div className="mb-6 flex flex-wrap gap-1 rounded-lg border bg-muted p-1 w-fit">
+        {([
+          { id: 'general' as const, label: t('projectSettings.tabGeneral', 'General'), icon: Settings },
+          { id: 'email' as const, label: t('projectSettings.tabEmail', 'Email'), icon: Mail },
+          { id: 'intake' as const, label: t('projectSettings.tabIntake', 'Intake'), icon: Inbox },
+          { id: 'storage' as const, label: t('projectSettings.tabStorage', 'Storage'), icon: HardDrive },
+          ...(hasPermission('Members.View')
+            ? [{ id: 'members' as const, label: t('projectSettings.tabMembers', 'Members'), icon: Users }]
+            : []),
+        ]).map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                activeTab === tab.id
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" /> {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
       <form onSubmit={handleSave} className="space-y-8">
-        {/* Ticket ID Configuration */}
+        {activeTab === 'general' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* Ticket ID Configuration */}
           <h3 className="mb-4 text-lg font-semibold">{t('projectSettings.ticketIdConfig')}</h3>
 
           <div className="space-y-4">
@@ -577,9 +610,11 @@ export function ProjectSettingsPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Assignment Mode */}
+        {activeTab === 'general' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* Assignment Mode */}
           <h3 className="mb-4 text-lg font-semibold">{t('projectSettings.assignmentMode')}</h3>
           <div className="space-y-3">
             {[
@@ -636,9 +671,11 @@ export function ProjectSettingsPage() {
             <p className="text-xs text-muted-foreground">{t('projectSettings.kanbanArchiveDesc')}</p>
           </div>
         </div>
+        )}
 
-        {/* Email Configuration */}
+        {activeTab === 'email' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* Email Configuration */}
           <h3 className="mb-4 text-lg font-semibold">{t('projectSettings.email')}</h3>
           <p className="mb-4 text-sm text-muted-foreground">
             {t('projectSettings.emailDesc')}
@@ -747,9 +784,11 @@ export function ProjectSettingsPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* File Storage (Backblaze B2) */}
+        {activeTab === 'storage' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* File Storage (Backblaze B2) */}
           <div className="mb-4">
             <h3 className="text-lg font-semibold">{t('projectSettings.fileStorageTitle', 'File Storage')}</h3>
             <p className="text-sm text-muted-foreground">{t('projectSettings.fileStorageDesc', 'Configure Backblaze B2 storage for email attachments. Credentials are encrypted at rest.')}</p>
@@ -780,9 +819,11 @@ export function ProjectSettingsPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Spam Settings */}
+        {activeTab === 'intake' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* Spam Settings */}
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Spam Protection</h3>
@@ -822,9 +863,11 @@ export function ProjectSettingsPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Email Signature */}
+        {activeTab === 'email' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* Email Signature */}
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Email Signature</h3>
@@ -868,9 +911,11 @@ export function ProjectSettingsPage() {
             </div>
           )}
         </div>
+        )}
 
-        {/* Auto-Reply */}
+        {activeTab === 'email' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* Auto-Reply */}
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Auto-Reply</h3>
@@ -918,9 +963,11 @@ export function ProjectSettingsPage() {
             </div>
           )}
         </div>
+        )}
 
-        {/* Contact Form Parser */}
+        {activeTab === 'intake' && (
         <div className="rounded-lg border bg-card p-6">
+          {/* Contact Form Parser */}
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">{t('projectSettings.contactFormParser')}</h3>
@@ -984,23 +1031,28 @@ ${cfMessageLabel}: I'm having trouble logging in to my account.`}
             </div>
           )}
         </div>
+        )}
 
         {/* Save */}
-        <div className="flex gap-2">
-          <Button type="submit" disabled={updateSettings.isPending}>
-            {updateSettings.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {t('projectSettings.saveSettings')}
-          </Button>
-        </div>
+        {activeTab !== 'members' && (
+          <div className="flex gap-2">
+            <Button type="submit" disabled={updateSettings.isPending}>
+              {updateSettings.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {t('projectSettings.saveSettings')}
+            </Button>
+          </div>
+        )}
       </form>
 
       {/* Project Members */}
-      {hasPermission('Members.View') && (
+      {activeTab === 'members' && hasPermission('Members.View') && (
         <ProjectMembersSection companyId={companyId!} projectId={projectId} canManage={hasPermission('Members.Edit')} />
       )}
 
       {/* API Keys */}
-      <ApiKeysSection companyId={companyId!} projectId={projectId} />
+      {activeTab === 'general' && (
+        <ApiKeysSection companyId={companyId!} projectId={projectId} />
+      )}
     </>
   )
 }
