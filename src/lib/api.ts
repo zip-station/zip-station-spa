@@ -65,8 +65,8 @@ class ApiClient {
     return this.request<T>(path, { method: 'POST', body: JSON.stringify(body) })
   }
 
-  put<T>(path: string, body?: unknown) {
-    return this.request<T>(path, { method: 'PUT', body: JSON.stringify(body) })
+  put<T>(path: string, body?: unknown, options?: { signal?: AbortSignal }) {
+    return this.request<T>(path, { method: 'PUT', body: JSON.stringify(body), signal: options?.signal })
   }
 
   patch<T>(path: string, body?: unknown) {

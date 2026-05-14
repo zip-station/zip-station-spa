@@ -199,6 +199,9 @@ export function TicketDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lastSavedBodyRef = useRef('')
   const draftStatusTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const sendingRef = useRef(false)
+  const draftSaveInFlightRef = useRef<Promise<unknown>>(Promise.resolve())
+  const draftSaveAbortRef = useRef<AbortController | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['ticket', companyId, ticketId],
@@ -265,16 +268,19 @@ export function TicketDetailPage() {
   useEffect(() => {
     if (!companyId || !ticketId) return
     const interval = setInterval(() => {
+      if (sendingRef.current) return
       const body = replyBody.trim()
       if (!body || body === lastSavedBodyRef.current) return
       lastSavedBodyRef.current = body
-      api
+      const controller = new AbortController()
+      draftSaveAbortRef.current = controller
+      draftSaveInFlightRef.current = api
         .put(`/api/v1/companies/${companyId}/tickets/${ticketId}/draft`, {
           body: replyBody,
           bodyHtml: replyHtml || undefined,
           isInternalNote,
-        })
-        .then(() => showDraftSaved())
+        }, { signal: controller.signal })
+        .then(() => { if (!controller.signal.aborted) showDraftSaved() })
         .catch(() => {})
     }, 5000)
     return () => clearInterval(interval)
@@ -303,14 +309,20 @@ export function TicketDetailPage() {
     return () => clearInterval(interval)
   }, [companyId, ticketId])
 
-  const deleteDraft = useCallback(() => {
+  const deleteDraft = useCallback(async () => {
     if (!companyId || !ticketId) return
     lastSavedBodyRef.current = ''
-    api.delete(`/api/v1/companies/${companyId}/tickets/${ticketId}/draft`).catch(() => {})
     queryClient.removeQueries({ queryKey: ['ticketDraft', companyId, ticketId] })
+    try { await draftSaveInFlightRef.current } catch { /* ignore */ }
+    api.delete(`/api/v1/companies/${companyId}/tickets/${ticketId}/draft`).catch(() => {})
   }, [companyId, ticketId, queryClient])
 
   const addMessage = useMutation({
+    onMutate: () => {
+      sendingRef.current = true
+      draftSaveAbortRef.current?.abort()
+    },
+    onSettled: () => { sendingRef.current = false },
     mutationFn: async (body: { body: string; bodyHtml?: string; isInternalNote: boolean }) => {
       const hasPendingAttachments = pendingFiles.length > 0
       const msg = await api.post<TicketMessageResponse>(
