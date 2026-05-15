@@ -6,9 +6,12 @@ import type {
   MaxExampleReplyRequest,
   MaxExampleReplyResponse,
   MaxSettings,
+  MaxTaskWithTicketResponse,
   MaxTestConnectionRequest,
   MaxTestConnectionResponse,
   MaxTicketEnrichmentResponse,
+  MaxToneAnalyzerRequest,
+  MaxToneAnalyzerResponse,
   SetMaxApiKeyRequest,
   TicketMaxResponse,
 } from '@/types/api'
@@ -122,6 +125,22 @@ export function useTestMaxConnection(companyId: string | null, projectId: string
   })
 }
 
+export function usePendingMaxTasks(companyId: string | null, projectId: string | null) {
+  return useQuery({
+    queryKey: ['max', 'pendingTasks', companyId, projectId],
+    queryFn: () => api.get<MaxTaskWithTicketResponse[]>(`${base(companyId!, projectId!)}/tasks`),
+    enabled: !!companyId && !!projectId,
+    refetchInterval: 15000,
+  })
+}
+
+export function useRunToneAnalyzer(companyId: string | null, projectId: string | null) {
+  return useMutation({
+    mutationFn: (data: MaxToneAnalyzerRequest) =>
+      api.post<MaxToneAnalyzerResponse>(`${base(companyId!, projectId!)}/tone-analyzer`, data),
+  })
+}
+
 export function useResetMax(companyId: string | null, projectId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -185,6 +204,8 @@ export function useApproveMaxTask(companyId: string | null, ticketId: string | n
         // the Linked Stories section refetches to surface it.
         queryClient.invalidateQueries({ queryKey: ['linkedStories', companyId, ticketId] })
         queryClient.invalidateQueries({ queryKey: ['kanbanCards', companyId] })
+        // Tasks dashboard listing
+        queryClient.invalidateQueries({ queryKey: ['max', 'pendingTasks', companyId] })
       }, 1500)
     },
   })
@@ -196,7 +217,10 @@ export function useRejectMaxTask(companyId: string | null, ticketId: string | nu
     mutationFn: (taskId: string) =>
       api.post(`/api/v1/companies/${companyId}/tickets/${ticketId}/max/tasks/${taskId}/reject`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ticketMaxKey(companyId, ticketId) })
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ticketMaxKey(companyId, ticketId) })
+        queryClient.invalidateQueries({ queryKey: ['max', 'pendingTasks', companyId] })
+      }, 1000)
     },
   })
 }

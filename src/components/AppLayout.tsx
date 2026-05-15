@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Inbox, FolderOpen, Settings, Menu, X, LayoutDashboard, LogOut, Users, Mail, MessageSquare, ClipboardList, Bell, FileText, ChevronDown, HelpCircle, Shield, Trello } from 'lucide-react'
+import { Inbox, FolderOpen, Settings, Menu, X, LayoutDashboard, LogOut, Users, Mail, MessageSquare, ClipboardList, Bell, FileText, ChevronDown, HelpCircle, Shield, Trello, Sparkles } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -12,6 +12,7 @@ import { api } from '@/lib/api'
 
 const navItemDefs = [
   { icon: LayoutDashboard, labelKey: 'nav.dashboard', href: '/', permission: 'Dashboard.View' as const },
+  { icon: Sparkles, labelKey: 'nav.maxTasks', href: '/max/tasks', permission: 'Max.View' as const },
   { icon: Trello, labelKey: 'nav.kanban', href: '/kanban', permission: 'Kanban.View' as const },
   { icon: Inbox, labelKey: 'nav.tickets', href: '/tickets', permission: 'Tickets.View' as const },
   { icon: Mail, labelKey: 'nav.intake', href: '/intake', permission: 'Intake.View' as const },

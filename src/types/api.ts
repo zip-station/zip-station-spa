@@ -275,3 +275,22 @@ export interface TicketMaxResponse {
   tasks: MaxTaskResponse[]
   questions: MaxQuestionResponse[]
 }
+
+export interface MaxTaskWithTicketResponse {
+  task: MaxTaskResponse
+  ticketNumber: number
+  ticketSubject: string
+  customerName?: string
+  customerEmail?: string
+}
+
+export interface MaxToneAnalyzerResponse {
+  toneGuide?: string
+  toneAvoid?: string
+  recommendedExampleIndices: number[]
+  replies: string[]
+}
+
+export interface MaxToneAnalyzerRequest {
+  replyCount?: number
+}

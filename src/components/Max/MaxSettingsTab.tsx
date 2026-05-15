@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Toast } from '@/components/ui/Toast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { ToneAnalyzerModal } from './ToneAnalyzerModal'
 import { api } from '@/lib/api'
 import type {
   MaxSettings,
@@ -71,6 +72,7 @@ export function MaxSettingsTab({ companyId, projectId, maxSettings, canEdit }: M
   const [toneGuide, setToneGuide] = useState(initial.toneGuide ?? '')
   const [toneAvoid, setToneAvoid] = useState(initial.toneAvoid ?? '')
   const [autoSendEnabled, setAutoSendEnabled] = useState(initial.autoSendEnabled ?? false)
+  const [analyzerOpen, setAnalyzerOpen] = useState(false)
   const [autoSendThreshold, setAutoSendThreshold] = useState(initial.autoSendThreshold)
   const [autoSendCategories, setAutoSendCategories] = useState<string[]>(initial.autoSendCategories ?? [])
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -195,32 +197,23 @@ export function MaxSettingsTab({ companyId, projectId, maxSettings, canEdit }: M
               {t('max.toneDesc', 'Shapes how Max sounds when drafting replies.')}
             </p>
           </div>
-          <Button type="button" variant="outline" size="sm" disabled title={t('max.analyzerComingSoon', 'Coming in phase 3')}>
+          <Button type="button" variant="outline" size="sm" onClick={() => setAnalyzerOpen(true)} disabled={!canEdit || !apiKeySet}>
             <FlaskConical className="mr-1.5 h-3.5 w-3.5" />
             {t('max.analyzePastReplies', 'Analyze my past replies')}
           </Button>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">{t('max.toneGuideLabel', 'How Max should sound')}</label>
+          <label className="text-sm font-medium">{t('max.toneGuideLabel', 'Voice & tone')}</label>
+          <p className="text-xs text-muted-foreground">
+            {t('max.toneGuideHelp', 'Anything that shapes how Max writes — voice, sentence patterns, do\'s, don\'ts. Write the whole list however feels natural; no need to split positive vs negative.')}
+          </p>
           <textarea
             value={toneGuide}
             onChange={(e) => setToneGuide(e.target.value)}
             disabled={!canEdit}
-            rows={5}
-            placeholder={t('max.toneGuidePlaceholder', 'Direct and matter-of-fact. First person singular ("I"). Short sentences. No corporate-speak.')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">{t('max.toneAvoidLabel', 'Things to avoid')}</label>
-          <textarea
-            value={toneAvoid}
-            onChange={(e) => setToneAvoid(e.target.value)}
-            disabled={!canEdit}
-            rows={5}
-            placeholder={t('max.toneAvoidPlaceholder', '- Don’t apologize for bugs ("I’ll investigate" instead of "I’m sorry")\n- No em-dashes\n- No "kindly" or "please be advised"')}
+            rows={10}
+            placeholder={t('max.toneGuidePlaceholder', '- Direct and matter-of-fact. First person singular ("I"). Short sentences.\n- No em-dashes\n- Don\'t apologize for bugs (use "I\'ll investigate" instead of "I\'m sorry")\n- No "kindly" or "please be advised"\n- Skip generic sign-offs like "Have a great day!"')}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
           />
         </div>
@@ -349,6 +342,17 @@ export function MaxSettingsTab({ companyId, projectId, maxSettings, canEdit }: M
           companyId={companyId}
           projectId={projectId}
           onReset={() => setToast({ message: t('max.resetDone', 'Max has been reset. Your API key is unchanged.'), type: 'success' })}
+        />
+      )}
+
+      {analyzerOpen && (
+        <ToneAnalyzerModal
+          companyId={companyId}
+          projectId={projectId}
+          currentToneGuide={toneGuide}
+          currentToneAvoid={toneAvoid}
+          onClose={() => setAnalyzerOpen(false)}
+          onApplied={() => setToast({ message: t('max.analyzerApplied', 'Tone settings updated from your past replies.'), type: 'success' })}
         />
       )}
     </div>

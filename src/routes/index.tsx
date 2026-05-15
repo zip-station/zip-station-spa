@@ -21,6 +21,7 @@ import { ReportsPage } from '@/pages/ReportsPage'
 import { RolesPage } from '@/pages/RolesPage'
 import { KanbanPage } from '@/pages/KanbanPage'
 import { KanbanCardDetailPage } from '@/pages/KanbanCardDetailPage'
+import { MaxTasksPage } from '@/pages/MaxTasksPage'
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -136,6 +137,12 @@ const kanbanCardDetailRoute = createRoute({
   }),
 })
 
+const maxTasksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/max/tasks',
+  component: MaxTasksPage,
+})
+
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   ticketsRoute,
@@ -153,6 +160,7 @@ const routeTree = rootRoute.addChildren([
   settingsRoute,
   kanbanRoute,
   kanbanCardDetailRoute,
+  maxTasksRoute,
 ])
 
 export const router = createRouter({ routeTree })
