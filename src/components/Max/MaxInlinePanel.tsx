@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Loader2, AlertTriangle, Bug, Lightbulb, BookOpen, CreditCard, UserCircle, MessageCircle, Trash, HelpCircle, ArrowRight, MessageCircleQuestion, Flag } from 'lucide-react'
+import { Sparkles, Loader2, AlertTriangle, Bug, Lightbulb, BookOpen, CreditCard, UserCircle, MessageCircle, Trash, HelpCircle, ArrowRight, MessageCircleQuestion, Flag, Check, X as XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { useTicketMax, useReenrichTicket } from '@/hooks/useMax'
+import { useTicketMax, useReenrichTicket, useApproveMaxTask, useRejectMaxTask } from '@/hooks/useMax'
+import { MaxText } from './MaxText'
 import type { MaxTicketEnrichmentResponse, MaxTaskResponse } from '@/types/api'
 
 const categoryStyle: Record<string, { bg: string; text: string; icon: typeof Bug }> = {
@@ -32,6 +33,7 @@ const actionLabel: Record<string, string> = {
   investigate: 'Suggests investigation',
   merge_duplicate: 'Suggests merging as duplicate',
   add_to_backlog: 'Suggests adding to kanban',
+  link_to_story: 'Suggests linking to an existing story',
   no_action: 'No action',
 }
 
@@ -41,14 +43,17 @@ const RENDER_AS_CARD: ReadonlySet<string> = new Set([
   'investigate',
   'merge_duplicate',
   'add_to_backlog',
+  'link_to_story',
 ])
 
 interface MaxInlinePanelProps {
   companyId: string
+  projectId: string
   ticketId: string
 }
 
-export function MaxInlinePanel({ companyId, ticketId }: MaxInlinePanelProps) {
+export function MaxInlinePanel({ companyId, projectId, ticketId }: MaxInlinePanelProps) {
+  const linkContext = { companyId, projectId, sourceTicketId: ticketId }
   const { t } = useTranslation()
   const { data, isLoading } = useTicketMax(companyId, ticketId)
   const reenrich = useReenrichTicket(companyId, ticketId)
@@ -150,11 +155,11 @@ export function MaxInlinePanel({ companyId, ticketId }: MaxInlinePanelProps) {
             ))}
           </div>
           {enrichment.summary && (
-            <p className="text-sm text-foreground">{enrichment.summary}</p>
+            <p className="text-sm text-foreground"><MaxText text={enrichment.summary} linkContext={linkContext} /></p>
           )}
           {isEscalated && escalationReason && (
             <p className="text-xs text-amber-700 dark:text-amber-400 italic">
-              {t('maxInline.escalatedWhy', 'Why:')} {escalationReason}
+              {t('maxInline.escalatedWhy', 'Why:')} <MaxText text={escalationReason} linkContext={linkContext} />
             </p>
           )}
           {enrichment.duplicateOfTicketId && (
@@ -181,7 +186,14 @@ export function MaxInlinePanel({ companyId, ticketId }: MaxInlinePanelProps) {
       {/* Suggested action cards. draft_reply is handled inline in the reply composer;
           escalated surfaces as the top-strip badge above. */}
       {tasks.filter((t) => t.status === 'pending' && RENDER_AS_CARD.has(t.type)).map((task) => (
-        <SuggestedActionCard key={task.id} task={task} enrichment={enrichment} />
+        <SuggestedActionCard
+          key={task.id}
+          companyId={companyId}
+          projectId={projectId}
+          ticketId={ticketId}
+          task={task}
+          enrichment={enrichment}
+        />
       ))}
 
       {/* Flagged questions */}
@@ -213,9 +225,30 @@ export function MaxInlinePanel({ companyId, ticketId }: MaxInlinePanelProps) {
   )
 }
 
-function SuggestedActionCard({ task, enrichment }: { task: MaxTaskResponse; enrichment: MaxTicketEnrichmentResponse }) {
+function SuggestedActionCard({ companyId, projectId, ticketId, task, enrichment }: { companyId: string; projectId: string; ticketId: string; task: MaxTaskResponse; enrichment: MaxTicketEnrichmentResponse }) {
+  const linkContext = { companyId, projectId, sourceTicketId: ticketId }
   const { t } = useTranslation()
   const headerLabel = actionLabel[task.type] ?? task.type
+  const approve = useApproveMaxTask(companyId, ticketId)
+  const reject = useRejectMaxTask(companyId, ticketId)
+  const busy = approve.isPending || reject.isPending || approve.isSuccess || reject.isSuccess
+  const [error, setError] = useState<string | null>(null)
+  const approveDone = approve.isSuccess
+  const rejectDone = reject.isSuccess
+
+  const handleApprove = () => {
+    setError(null)
+    approve.mutate(task.id, { onError: (e: Error) => setError(e.message) })
+  }
+  const handleReject = () => {
+    setError(null)
+    reject.mutate(task.id, { onError: (e: Error) => setError(e.message) })
+  }
+
+  // investigate is purely informational — Max has no action to execute, the
+  // hints are just for the maintainer. One "Mark reviewed" button is clearer
+  // than Approve/Reject, which both imply Max is asking for permission.
+  const informationalOnly = task.type === 'investigate'
 
   return (
     <div className="rounded-lg border bg-card">
@@ -227,19 +260,42 @@ function SuggestedActionCard({ task, enrichment }: { task: MaxTaskResponse; enri
             {Math.round(task.confidence * 100)}%
           </span>
         </div>
-        <span className="text-xs text-muted-foreground italic">{t('maxInline.readOnly', 'Read-only in this phase')}</span>
+        <div className="flex items-center gap-1.5">
+          {informationalOnly ? (
+            <Button type="button" variant="outline" size="sm" className="h-7" onClick={handleApprove} disabled={busy}>
+              {approve.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className={`mr-1 h-3 w-3 ${approveDone ? 'text-green-600' : ''}`} />}
+              {approve.isPending ? t('maxInline.working', 'Working…') : approveDone ? t('maxInline.done', 'Done') : t('maxInline.markReviewed', 'Mark reviewed')}
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="outline" size="sm" className="h-7" onClick={handleReject} disabled={busy}>
+                {reject.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <XIcon className={`mr-1 h-3 w-3 ${rejectDone ? 'text-muted-foreground' : ''}`} />}
+                {reject.isPending ? t('maxInline.rejecting', 'Rejecting…') : rejectDone ? t('maxInline.rejected', 'Rejected') : t('maxInline.reject', 'Reject')}
+              </Button>
+              <Button type="button" size="sm" className="h-7" onClick={handleApprove} disabled={busy}>
+                {approve.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Check className={`mr-1 h-3 w-3 ${approveDone ? 'text-green-200' : ''}`} />}
+                {approve.isPending ? t('maxInline.approving', 'Approving…') : approveDone ? t('maxInline.done', 'Done') : t('maxInline.approve', 'Approve')}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+      {error && (
+        <div className="border-b bg-red-50 dark:bg-red-900/20 px-4 py-2 text-xs text-red-700 dark:text-red-400">
+          {error}
+        </div>
+      )}
       <div className="p-4 space-y-3">
         {task.type === 'investigate' && (
           <div className="text-sm">
             <p className="font-medium mb-1">{t('maxInline.investigationHints', 'Investigation hints')}</p>
-            <p className="text-sm whitespace-pre-wrap">{task.details.notes ?? '(no notes provided)'}</p>
+            <p className="text-sm whitespace-pre-wrap"><MaxText text={task.details.notes ?? '(no notes provided)'} linkContext={linkContext} /></p>
           </div>
         )}
         {task.type === 'merge_duplicate' && (
           <div className="text-sm">
             <p>{t('maxInline.suggestsMerge', 'Suggests merging into the duplicate above.')}</p>
-            {task.details.notes && <p className="text-xs text-muted-foreground italic mt-1">{task.details.notes}</p>}
+            {task.details.notes && <p className="text-xs text-muted-foreground italic mt-1"><MaxText text={task.details.notes} linkContext={linkContext} /></p>}
           </div>
         )}
         {task.type === 'add_to_backlog' && (
@@ -251,7 +307,24 @@ function SuggestedActionCard({ task, enrichment }: { task: MaxTaskResponse; enri
                 <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">{task.details.suggestedKanbanType}</span>
               )}
             </p>
-            {task.details.notes && <p className="text-xs text-muted-foreground italic mt-1">{task.details.notes}</p>}
+            {task.details.notes && <p className="text-xs text-muted-foreground italic mt-1"><MaxText text={task.details.notes} linkContext={linkContext} /></p>}
+          </div>
+        )}
+        {task.type === 'link_to_story' && (
+          <div className="text-sm">
+            <p>
+              {t('maxInline.suggestsLink', 'Suggests linking this ticket to an existing story:')}{' '}
+              {task.details.linkToStoryCardNumber != null ? (
+                <MaxText text={`STR-${task.details.linkToStoryCardNumber}`} linkContext={linkContext} />
+              ) : null}
+              {task.details.linkToStoryTitle && (
+                <span className="ml-1 font-medium">{task.details.linkToStoryTitle}</span>
+              )}
+              {task.details.suggestedKanbanType && (
+                <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">{task.details.suggestedKanbanType}</span>
+              )}
+            </p>
+            {task.details.notes && <p className="text-xs text-muted-foreground italic mt-1"><MaxText text={task.details.notes} linkContext={linkContext} /></p>}
           </div>
         )}
       </div>

@@ -167,3 +167,76 @@ export function useReenrichTicket(companyId: string | null, ticketId: string | n
     },
   })
 }
+
+export function useApproveMaxTask(companyId: string | null, ticketId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      api.post(`/api/v1/companies/${companyId}/tickets/${ticketId}/max/tasks/${taskId}/approve`),
+    onSuccess: () => {
+      // Delay the invalidations so the UI can show a brief "Done" success state
+      // on the action card before the refetched task list removes it. Without
+      // this the card vanishes the instant the request returns and the user
+      // sees nothing to confirm the action worked.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ticketMaxKey(companyId, ticketId) })
+        queryClient.invalidateQueries({ queryKey: ['ticket', companyId, ticketId] })
+        // add_to_backlog approvals create a kanban story linked to the ticket;
+        // the Linked Stories section refetches to surface it.
+        queryClient.invalidateQueries({ queryKey: ['linkedStories', companyId, ticketId] })
+        queryClient.invalidateQueries({ queryKey: ['kanbanCards', companyId] })
+      }, 1500)
+    },
+  })
+}
+
+export function useRejectMaxTask(companyId: string | null, ticketId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      api.post(`/api/v1/companies/${companyId}/tickets/${ticketId}/max/tasks/${taskId}/reject`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketMaxKey(companyId, ticketId) })
+    },
+  })
+}
+
+// Link the current ticket to another ticket by ticket number.
+// Server's ResolveTicketAsync handles number→id natively.
+export function useLinkTicketByNumber(companyId: string | null, sourceTicketId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ticketNumber: string) =>
+      api.post(`/api/v1/companies/${companyId}/tickets/${sourceTicketId}/link`, {
+        targetTicketId: ticketNumber,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', companyId, sourceTicketId] })
+    },
+  })
+}
+
+// Link the current ticket to a kanban story by card number. Two-step: fetch
+// the card to resolve its id, then call link-ticket with that id.
+export function useLinkTicketToStoryByNumber(
+  companyId: string | null,
+  projectId: string | null,
+  sourceTicketId: string | null,
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (storyNumber: string) => {
+      const detail = await api.get<{ card: { id: string } }>(
+        `/api/v1/companies/${companyId}/projects/${projectId}/board/cards/${storyNumber}`,
+      )
+      await api.post(
+        `/api/v1/companies/${companyId}/projects/${projectId}/board/cards/${detail.card.id}/link-ticket`,
+        { ticketIdOrNumber: sourceTicketId },
+      )
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', companyId, sourceTicketId] })
+      queryClient.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
+    },
+  })
+}

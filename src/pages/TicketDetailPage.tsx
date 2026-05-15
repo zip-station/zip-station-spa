@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X, Paperclip, FileIcon, Pin, PinOff, Sparkles } from 'lucide-react'
+import { ArrowLeft, Loader2, Send, StickyNote, CheckCircle, RotateCcw, XCircle, MessageSquare, AlertCircle, RefreshCw, Check, Clock, UserCircle, Link2, GitMerge, Plus, Tag, X, Paperclip, FileIcon, Pin, PinOff, Sparkles, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -11,7 +11,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { copyToClipboard } from '@/lib/utils'
-import type { UserResponse } from '@/types/api'
+import type { UserResponse, TicketSummaryResponse } from '@/types/api'
 import { LinkedStoriesSection } from '@/components/Kanban/LinkedStoriesSection'
 import { MaxInlinePanel } from '@/components/Max/MaxInlinePanel'
 import { useTicketMax, useReenrichTicket } from '@/hooks/useMax'
@@ -56,6 +56,7 @@ interface TicketMessageResponse {
 interface TicketDetailData {
   ticket: TicketResponse
   messages: TicketMessageResponse[]
+  linkedTickets: TicketSummaryResponse[]
 }
 
 /** Split HTML content into new content and quoted reply content */
@@ -270,6 +271,11 @@ export function TicketDetailPage() {
       setReplyHtml(draftData.bodyHtml ?? '')
       setIsInternalNote(draftData.isInternalNote ?? false)
       setIsAiDraft(draftData.isAiDraft ?? false)
+      // If the restored draft was last saved as an AI draft, snapshot the body
+      // so the next edit can detect divergence and clear the pill.
+      if (draftData.isAiDraft && draftData.body) {
+        setAiDraftSnapshot(draftData.body)
+      }
       lastSavedBodyRef.current = draftData.body ?? ''
       setEditorKey((k) => k + 1)
       setDraftStatus('restored')
@@ -278,17 +284,21 @@ export function TicketDetailPage() {
   }, [draftData])
 
   // Max draft: prefill the reply composer with Max's drafted reply when there is
-  // no saved user draft. The badge stays until the user clears the composer or sends.
+  // no saved user draft. The pill stays only while the composer holds the
+  // unedited AI text; any divergence clears it. We snapshot the original Max
+  // text so we can detect divergence even after the editor remounts.
   const { data: maxData } = useTicketMax(companyId, ticketId)
   const reenrich = useReenrichTicket(companyId, ticketId)
   const aiPrefillRef = useRef(false)
   const [isAiDraft, setIsAiDraft] = useState(false)
+  const [aiDraftSnapshot, setAiDraftSnapshot] = useState<string | null>(null)
 
   const draftToEditor = (draftText: string) => {
     setReplyBody(draftText)
     setReplyHtml(plainTextToHtml(draftText))
     setEditorKey((k) => k + 1)
     setIsAiDraft(true)
+    setAiDraftSnapshot(draftText)
   }
 
   const handleRegenerateWithMax = () => {
@@ -325,10 +335,21 @@ export function TicketDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftData, maxData])
 
-  // Clear the AI badge if the user empties the composer.
+  // Clear the AI badge when the composer diverges from Max's original text,
+  // or when the user empties the composer entirely. If they touched it, it's
+  // theirs now — the pill should go away without requiring a manual dismiss.
   useEffect(() => {
-    if (isAiDraft && replyBody.trim() === '') setIsAiDraft(false)
-  }, [replyBody, isAiDraft])
+    if (!isAiDraft) return
+    if (replyBody.trim() === '') {
+      setIsAiDraft(false)
+      setAiDraftSnapshot(null)
+      return
+    }
+    if (aiDraftSnapshot != null && replyBody !== aiDraftSnapshot) {
+      setIsAiDraft(false)
+      setAiDraftSnapshot(null)
+    }
+  }, [replyBody, isAiDraft, aiDraftSnapshot])
 
   // Draft: auto-save every 5 seconds
   const showDraftSaved = useCallback(() => {
@@ -592,7 +613,7 @@ export function TicketDetailPage() {
     )
   }
 
-  const { ticket, messages } = data
+  const { ticket, messages, linkedTickets = [] } = data
 
   const insertCannedResponse = (item: CannedResponseItem) => {
     setReplyHtml(item.bodyHtml)
@@ -856,8 +877,8 @@ export function TicketDetailPage() {
       </div>
 
       {/* Max enrichment */}
-      {hasPermission('Max.View') && companyId && (
-        <MaxInlinePanel companyId={companyId} ticketId={ticketId} />
+      {hasPermission('Max.View') && companyId && projectId && (
+        <MaxInlinePanel companyId={companyId} projectId={projectId} ticketId={ticketId} />
       )}
 
       {/* Tags & Linked Tickets & Linked Stories */}
@@ -976,28 +997,65 @@ export function TicketDetailPage() {
           )}
 
           {ticket.linkedTicketIds?.length > 0 ? (
-            <div className="space-y-1">
-              {ticket.linkedTicketIds.map((linkedId) => (
-                <div key={linkedId} className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted/50">
-                  <Link
-                    to="/tickets/$ticketId"
-                    params={{ ticketId: linkedId }}
-                    className="text-sm text-primary hover:underline font-mono"
+            <ul className="divide-y overflow-hidden rounded-md border">
+              {ticket.linkedTicketIds.map((linkedId) => {
+                const linked = linkedTickets.find((lt) => lt.id === linkedId)
+                return (
+                  <li
+                    key={linkedId}
+                    className="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50"
                   >
-                    {linkedId}
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs text-muted-foreground hover:text-red-600"
-                    onClick={() => unlinkTicket.mutate(linkedId)}
-                    disabled={unlinkTicket.isPending}
-                  >
-                    Unlink
-                  </Button>
-                </div>
-              ))}
-            </div>
+                    <Link
+                      to="/tickets/$ticketId"
+                      params={{ ticketId: linkedId }}
+                      className="min-w-0 flex-1 hover:underline"
+                    >
+                      <div className="flex items-center gap-2">
+                        {linked?.status && (
+                          <span
+                            className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${statusColors[linked.status] ?? ''}`}
+                          >
+                            {linked.status}
+                          </span>
+                        )}
+                        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                          {linked ? `#${linked.ticketNumber}` : `${linkedId.slice(0, 8)}…`}
+                        </span>
+                        <span className="truncate text-sm">
+                          {linked?.subject ?? <span className="italic text-muted-foreground">unavailable</span>}
+                        </span>
+                      </div>
+                      {linked?.customerEmail && (
+                        <div className="mt-1 truncate text-xs text-muted-foreground">
+                          {linked.customerEmail}
+                        </div>
+                      )}
+                    </Link>
+                    <Link
+                      to="/tickets/$ticketId"
+                      params={{ ticketId: linkedId }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-muted-foreground hover:text-foreground"
+                      title="Open in new tab"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                    {hasPermission('Tickets.Link') && (
+                      <button
+                        type="button"
+                        onClick={() => unlinkTicket.mutate(linkedId)}
+                        className="shrink-0 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 disabled:opacity-50"
+                        disabled={unlinkTicket.isPending}
+                        title="Unlink"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
           ) : (
             <p className="text-sm text-muted-foreground">No linked tickets.</p>
           )}
@@ -1241,11 +1299,20 @@ export function TicketDetailPage() {
               />
               {isAiDraft && (
                 <span
-                  className="pointer-events-none absolute bottom-2 right-12 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary shadow-sm border border-primary/20"
-                  title={t('ticketDetail.aiDraftedTooltip', 'This reply was drafted by Max. Edit before sending.')}
+                  className="absolute bottom-2 right-12 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary shadow-sm border border-primary/20"
+                  title={t('ticketDetail.aiDraftedTooltip', 'Drafted by Max. Click × to dismiss the badge once it\'s your own.')}
                 >
                   <Sparkles className="h-2.5 w-2.5" />
                   {t('ticketDetail.aiGenerated', 'AI generated')}
+                  <button
+                    type="button"
+                    onClick={() => setIsAiDraft(false)}
+                    className="ml-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full hover:bg-primary/20"
+                    aria-label="Dismiss AI badge"
+                    title="Dismiss"
+                  >
+                    <X className="h-2 w-2" />
+                  </button>
                 </span>
               )}
               {maxData?.enrichment && (

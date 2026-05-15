@@ -243,6 +243,8 @@ export interface MaxTaskDetailsResponse {
   suggestedTitle?: string
   suggestedKanbanType?: string
   questionId?: string
+  linkToStoryCardNumber?: number
+  linkToStoryTitle?: string
 }
 
 export interface MaxTaskResponse {
