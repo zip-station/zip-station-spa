@@ -257,13 +257,13 @@ export function TicketsPage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('tickets.title')}</h2>
           <p className="mt-1 text-muted-foreground">{t('tickets.subtitle')}</p>
         </div>
         {hasPermission('Tickets.Create') && (
-          <Button onClick={() => setShowCreate(true)} disabled={showCreate}>
+          <Button onClick={() => setShowCreate(true)} disabled={showCreate} className="self-start sm:self-auto">
             <Plus className="mr-2 h-4 w-4" /> {t('tickets.newTicket')}
           </Button>
         )}
@@ -469,11 +469,11 @@ export function TicketsPage() {
 
       {/* Bulk action bar */}
       {!showCreate && selectedTicketIds.size > 0 && hasPermission('Tickets.Edit') && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border bg-accent/50 px-4 py-2.5">
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-accent/50 px-4 py-2.5 sm:gap-3">
           <span className="text-sm font-medium">
             {selectedTicketIds.size} selected
           </span>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <Button
               size="sm"
               variant="outline"
@@ -583,30 +583,30 @@ export function TicketsPage() {
                 <Link
                   to="/tickets/$ticketId"
                   params={{ ticketId: ticket.id }}
-                  className="flex flex-1 items-center gap-4 px-3 py-3 transition-colors hover:bg-accent/50 min-w-0"
+                  className="flex flex-1 flex-col gap-2 px-3 py-3 transition-colors hover:bg-accent/50 min-w-0 sm:flex-row sm:items-center sm:gap-4"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-medium">{ticket.subject}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="truncate font-medium min-w-0">{ticket.subject}</p>
                       {ticket.status === 'Pending' && ticket.lastMessageSource === 'Customer' && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                           Customer replied
                         </span>
                       )}
                       {ticket.status === 'Pending' && ticket.updatedOnDateTime > 0 &&
                         (Date.now() - ticket.updatedOnDateTime) > 5 * 24 * 60 * 60 * 1000 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
                           <Clock className="h-3 w-3" /> {t('tickets.stale')}
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                       <span>{getProjectName(ticket.projectId)}</span>
-                      <span>{ticket.customerEmail || ticket.customerName || t('tickets.noCustomer')}</span>
+                      <span className="break-all">{ticket.customerEmail || ticket.customerName || t('tickets.noCustomer')}</span>
                       <span>{formatDate(ticket.createdOnDateTime)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[ticket.priority] ?? ''}`}>
                       {t(priorityI18n[ticket.priority] ?? ticket.priority)}
                     </span>

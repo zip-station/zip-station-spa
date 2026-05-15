@@ -66,9 +66,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const openTicketCount = ticketCounts?.totalResultCount ?? 0
 
   return (
-    <div className="h-screen bg-background overflow-hidden">
+    <div className="flex h-screen flex-col bg-background overflow-hidden">
       {/* Mobile header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b bg-background px-4 py-3 lg:hidden">
+      <header className="flex shrink-0 items-center justify-between border-b bg-background px-4 py-3 lg:hidden">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="rounded-md p-2 hover:bg-accent"
@@ -81,7 +81,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </button>
       </header>
 
-      <div className="flex h-[calc(100vh-0px)] lg:h-screen">
+      <div className="flex min-h-0 flex-1">
         {/* Sidebar */}
         <aside
           className={`

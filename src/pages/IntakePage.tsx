@@ -364,12 +364,12 @@ export function IntakePage() {
 
   return (
     <>
-      <div className="mb-6 flex items-start justify-between">
-        <div>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{t('intake.title')}</h2>
           <p className="mt-1 text-muted-foreground">{t('intake.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {countdown && (
             <span className="text-xs text-muted-foreground">
               {pollStatus?.pending ? t('intake.checking') : t('intake.nextCheck', { countdown })}
@@ -644,7 +644,7 @@ export function IntakePage() {
       {/* === EMAILS TAB === */}
       {activeTab === 'emails' && <>
       {/* Status filter tabs */}
-      <div className="mb-4 flex gap-1 rounded-lg border bg-muted p-1">
+      <div className="mb-4 flex flex-wrap gap-1 rounded-lg border bg-muted p-1">
         {(['Pending', 'Approved', 'Denied', 'all'] as StatusFilter[]).map((f) => (
           <button
             key={f}
@@ -668,7 +668,7 @@ export function IntakePage() {
 
       {/* Bulk action bar */}
       {selectedIntakeIds.size > 0 && (
-        <div className="mb-3 flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/50 px-4 py-2 sm:gap-3">
           <span className="text-sm font-medium">{selectedIntakeIds.size} selected</span>
           {hasPermission('Intake.Approve') && (
             <Button size="sm" onClick={() => bulkIntakeAction.mutate({ intakeIds: Array.from(selectedIntakeIds), action: 'approve' })} disabled={bulkIntakeAction.isPending}>
@@ -701,34 +701,35 @@ export function IntakePage() {
           <div className="divide-y">
             {intakeEmails.map((email) => (
               <div key={email.id} className="px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <button onClick={(e) => { e.stopPropagation(); toggleIntakeSelection(email.id) }} className="text-muted-foreground hover:text-foreground shrink-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
+                    <button onClick={(e) => { e.stopPropagation(); toggleIntakeSelection(email.id) }} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
                       {selectedIntakeIds.has(email.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                     </button>
                   <div
                     className="min-w-0 flex-1 cursor-pointer"
                     onClick={() => setExpandedId(expandedId === email.id ? null : email.id)}
                   >
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-medium">{email.subject}</p>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[email.status] ?? ''}`}>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="truncate font-medium min-w-0">{email.subject}</p>
+                      <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[email.status] ?? ''}`}>
                         {email.status}
                       </span>
                       {email.spamScore > 50 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
                           <AlertTriangle className="h-3 w-3" /> {t('intake.spam')} {email.spamScore}
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{email.fromName} &lt;{email.fromEmail}&gt;</span>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span className="break-all">{email.fromName} &lt;{email.fromEmail}&gt;</span>
                       <span>{getProjectName(email.projectId)}</span>
                       <span>{formatDate(email.receivedOn || email.createdOnDateTime)}</span>
                     </div>
                   </div>
+                  </div>
                   {email.status === 'Pending' && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                       {hasPermission('Intake.Approve') && (
                         <Button
                           size="sm"
@@ -761,7 +762,6 @@ export function IntakePage() {
                       )}
                     </div>
                   )}
-                </div>
                 </div>
 
                 {/* Expanded body */}

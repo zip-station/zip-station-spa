@@ -663,16 +663,16 @@ export function TicketDetailPage() {
           {t('ticketDetail.backToTickets')}
         </button>
 
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <div className="flex flex-col items-start gap-4 lg:flex-row lg:justify-between">
+          <div className="min-w-0 w-full lg:flex-1">
             <button
               onClick={() => { copyToClipboard(String(ticket.ticketNumber)); setTicketIdCopied(true); setTimeout(() => setTicketIdCopied(false), 2000) }}
               className="text-xs font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground cursor-pointer"
             >
               {ticketIdCopied ? 'Copied!' : `Ticket #${ticket.ticketNumber}`}
             </button>
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold tracking-tight">{ticket.subject}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-2xl font-bold tracking-tight break-words min-w-0">{ticket.subject}</h2>
               {activeViewers.length > 0 && (
                 <div className="flex items-center gap-1 ml-2">
                   {activeViewers.map((v) => (
@@ -730,16 +730,16 @@ export function TicketDetailPage() {
           </div>
 
           {/* Assignment + Status actions */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto lg:shrink-0">
             {/* Assignment dropdown */}
             {hasPermission('Tickets.Assign') && (
-              <div className="flex items-center gap-2">
-                <UserCircle className="h-4 w-4 text-muted-foreground" />
+              <div className="flex min-w-0 items-center gap-2">
+                <UserCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <select
                   value={ticket.assignedToUserId ?? ''}
                   onChange={(e) => assignTicket.mutate(e.target.value || null)}
                   disabled={assignTicket.isPending}
-                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-8 min-w-0 max-w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">{t('tickets.unassigned')}</option>
                   {companyMembers?.map((member) => (
