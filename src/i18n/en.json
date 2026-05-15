@@ -482,7 +482,8 @@
       "HighSpamScore": "High Spam Score",
       "KeywordInSubject": "Keyword in Subject",
       "KeywordInBody": "Keyword in Body",
-      "CustomerContact": "Customer Contact"
+      "CustomerContact": "Customer Contact",
+      "CustomerReply": "Customer Reply"
     },
     "channelTypes": {
       "Slack": "Slack",

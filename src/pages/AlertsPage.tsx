@@ -16,6 +16,7 @@ type AlertTriggerType =
   | 'KeywordInSubject'
   | 'KeywordInBody'
   | 'CustomerContact'
+  | 'CustomerReply'
 
 type AlertChannelType = 'Slack' | 'Discord' | 'GenericWebhook'
 
@@ -41,6 +42,7 @@ const triggerTypes: AlertTriggerType[] = [
   'KeywordInSubject',
   'KeywordInBody',
   'CustomerContact',
+  'CustomerReply',
 ]
 
 const channelTypes: AlertChannelType[] = ['Slack', 'Discord', 'GenericWebhook']
