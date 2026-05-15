@@ -71,3 +71,31 @@
   height: 0;
   pointer-events: none;
 }
+
+/* List styles for the rich text editor and rendered message bodies.
+   Tailwind preflight strips list-style; @tailwindcss/typography isn't installed,
+   so `prose` doesn't restore it. Provide it explicitly. */
+.ProseMirror ul,
+.prose ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.ProseMirror ol,
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.ProseMirror li,
+.prose li {
+  margin: 0.25rem 0;
+}
+.ProseMirror ul ul,
+.prose ul ul {
+  list-style: circle;
+}
+.ProseMirror ul ul ul,
+.prose ul ul ul {
+  list-style: square;
+}
