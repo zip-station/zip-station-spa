@@ -75,11 +75,11 @@ export function LinkedStoriesSection({ companyId, ticketId, canEdit }: LinkedSto
       ) : !stories || stories.length === 0 ? (
         <p className="text-sm text-muted-foreground">No linked stories.</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="divide-y overflow-hidden rounded-md border">
           {stories.map((s) => (
             <li
               key={s.id}
-              className="group flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+              className="group flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50"
             >
               <Link
                 to="/kanban/stories/$storyNumber"
@@ -88,14 +88,14 @@ export function LinkedStoriesSection({ companyId, ticketId, canEdit }: LinkedSto
                 className="min-w-0 flex-1 hover:underline"
               >
                 <div className="flex items-center gap-2">
-                  <span className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${cardTypeColors[s.type]}`}>
+                  <span className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${cardTypeColors[s.type]}`}>
                     {cardTypeLabels[s.type]}
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">{formatStoryId(s.cardNumber)}</span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">{formatStoryId(s.cardNumber)}</span>
                   <span className="truncate text-sm">{s.title}</span>
                 </div>
                 {s.columnName && (
-                  <div className="mt-0.5 text-xs text-muted-foreground">
+                  <div className="mt-1 truncate text-xs text-muted-foreground">
                     {s.projectName ? `${s.projectName} · ${s.columnName}` : s.columnName}
                   </div>
                 )}
@@ -106,7 +106,7 @@ export function LinkedStoriesSection({ companyId, ticketId, canEdit }: LinkedSto
                 search={{ fromTicket: undefined }}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground"
+                className="shrink-0 text-muted-foreground hover:text-foreground"
                 title="Open story in new tab"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -115,7 +115,7 @@ export function LinkedStoriesSection({ companyId, ticketId, canEdit }: LinkedSto
                 <button
                   type="button"
                   onClick={() => unlink.mutate(s)}
-                  className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+                  className="shrink-0 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 disabled:opacity-50"
                   disabled={unlink.isPending}
                   title="Unlink"
                 >
