@@ -106,6 +106,18 @@ export function SettingsPage() {
     onError: (err: Error) => setSmtpError(err.message),
   })
 
+  const [baseUrlSaved, setBaseUrlSaved] = useState(false)
+  const [baseUrlError, setBaseUrlError] = useState<string | null>(null)
+  const saveBaseUrl = useMutation({
+    mutationFn: () => api.patch(`/api/v1/companies/${companyId}/settings`, { baseUrl }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] })
+      setBaseUrlSaved(true)
+      setBaseUrlError(null)
+    },
+    onError: (err: Error) => setBaseUrlError(err.message),
+  })
+
   const handleSmtpSave = (e: React.FormEvent) => {
     e.preventDefault()
     saveSmtp.mutate({
@@ -272,10 +284,26 @@ export function SettingsPage() {
           <Globe className="h-5 w-5 text-muted-foreground" />
           <div>
             <h3 className="font-semibold">Dashboard URL</h3>
-            <p className="text-sm text-muted-foreground">The public URL where your Zip Station dashboard is hosted. Used in invitation emails.</p>
+            <p className="text-sm text-muted-foreground">The public URL where your Zip Station dashboard is hosted. Used in invitation emails and the MCP setup command.</p>
           </div>
         </div>
-        <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://zip.yourdomain.com" />
+        {baseUrlSaved && <Toast message="Dashboard URL saved" type="success" onClose={() => setBaseUrlSaved(false)} />}
+        {baseUrlError && <Toast message={baseUrlError} type="error" onClose={() => setBaseUrlError(null)} />}
+        <div className="flex items-start gap-2">
+          <Input
+            className="flex-1"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder="https://zip.yourdomain.com"
+          />
+          <Button
+            onClick={() => saveBaseUrl.mutate()}
+            disabled={saveBaseUrl.isPending || baseUrl === (company?.settings?.baseUrl ?? '')}
+          >
+            {saveBaseUrl.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+            {t('common.save')}
+          </Button>
+        </div>
       </div>
 
       )}
@@ -530,7 +558,7 @@ export function SettingsPage() {
       </div>
       )}
 
-      <PersonalAccessTokensSection companyId={companyId} />
+      <PersonalAccessTokensSection companyId={companyId} dashboardUrl={company?.settings?.baseUrl} />
 
       {deleteTarget && (
         <ConfirmModal

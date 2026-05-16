@@ -24,7 +24,13 @@ function formatTimestamp(ts: number | undefined | null): string {
   return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-export function PersonalAccessTokensSection({ companyId }: { companyId: string | null }) {
+export function PersonalAccessTokensSection({
+  companyId,
+  dashboardUrl,
+}: {
+  companyId: string | null
+  dashboardUrl?: string
+}) {
   const { t } = useTranslation()
   const { data: tokens, isLoading } = usePersonalAccessTokens(companyId)
   const createMutation = useCreatePersonalAccessToken(companyId)
@@ -39,8 +45,13 @@ export function PersonalAccessTokensSection({ companyId }: { companyId: string |
   const [revokeTarget, setRevokeTarget] = useState<PersonalAccessTokenResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const mcpUrl = (() => {
+    const base = dashboardUrl?.trim().replace(/\/+$/, '')
+    if (base) return `${base}/mcp`
+    return 'https://your-zip-station.example.com/mcp'
+  })()
   const mcpCommand = (token: string) =>
-    `claude mcp add --transport http --scope user zip-station http://localhost:5101/mcp --header "Authorization: Bearer ${token}"`
+    `claude mcp add --transport http --scope user zip-station ${mcpUrl} --header "Authorization: Bearer ${token}"`
 
   const handleCreate = async () => {
     setError(null)
