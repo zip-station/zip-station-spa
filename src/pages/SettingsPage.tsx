@@ -13,6 +13,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { api } from '@/lib/api'
 import { usePermissions } from '@/hooks/usePermissions'
 import type { UserResponse } from '@/types/api'
+import { PersonalAccessTokensSection } from '@/components/Settings/PersonalAccessTokensSection'
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation()
@@ -528,6 +529,8 @@ export function SettingsPage() {
         )}
       </div>
       )}
+
+      <PersonalAccessTokensSection companyId={companyId} />
 
       {deleteTarget && (
         <ConfirmModal

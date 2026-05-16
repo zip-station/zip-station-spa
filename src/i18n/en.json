@@ -572,5 +572,37 @@
     "resetConfirmMessage": "This clears Max's project context, tone guide, tone avoid, all instructions, and all example replies for this project. Your API key, the enable toggle, past ticket enrichments, and the audit log are kept. This can't be undone.",
     "resetConfirm": "Yes, reset Max",
     "resetDone": "Max has been reset. Your API key is unchanged."
+  },
+  "pat": {
+    "title": "Personal Access Tokens",
+    "subtitle": "Use these to authenticate the MCP server and other API clients. They inherit your permissions and stop working if your account is disabled.",
+    "create": "Create token",
+    "name": "Name",
+    "namePlaceholder": "e.g. Laptop MCP, CI pipeline",
+    "nameRequired": "Name is required",
+    "savePrompt": "Copy this token now — it will not be shown again.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyCommand": "Copy command",
+    "mcpCommandTitle": "Connect Claude Code",
+    "mcpCommandHelp": "Run this in your terminal. Change the URL if your Zip Station is not on this machine.",
+    "dismiss": "I've saved it",
+    "empty": "No tokens yet.",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "never": "Never",
+    "expires": "Expires",
+    "expired": "Expired",
+    "revoked": "Revoked",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke this token?",
+    "revokeMessage": "It will stop working immediately. Anything using it will lose access.",
+    "expiry": {
+      "label": "Expires",
+      "never": "Never",
+      "30d": "30 days",
+      "90d": "90 days",
+      "1y": "1 year"
+    }
   }
 }

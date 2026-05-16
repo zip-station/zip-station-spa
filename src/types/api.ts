@@ -294,3 +294,24 @@ export interface MaxToneAnalyzerResponse {
 export interface MaxToneAnalyzerRequest {
   replyCount?: number
 }
+
+export interface PersonalAccessTokenResponse {
+  id: string
+  userId: string
+  companyId: string
+  name: string
+  tokenPrefix: string
+  isRevoked: boolean
+  createdOnDateTime: number
+  lastUsedOnDateTime: number
+  expiresOnDateTime?: number
+}
+
+export interface PersonalAccessTokenCreatedResponse extends PersonalAccessTokenResponse {
+  fullToken: string
+}
+
+export interface CreatePersonalAccessTokenRequest {
+  name: string
+  expiresOnDateTime?: number
+}
