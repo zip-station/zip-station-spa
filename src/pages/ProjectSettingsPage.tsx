@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Loader2, Save, AlertTriangle, Key, Copy, Trash2, Plus, Users, Shield, X, Settings, Mail, Inbox, HardDrive, Sparkles } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, AlertTriangle, Key, Copy, Trash2, Plus, Users, Shield, X, Settings, Mail, Inbox, HardDrive, Sparkles, MessageSquare } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { copyToClipboard } from '@/lib/utils'
@@ -12,6 +12,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
 import { MaxSettingsTab } from '@/components/Max/MaxSettingsTab'
+import { DiscordSettingsTab } from '@/components/Discord/DiscordSettingsTab'
 import type { MaxSettings } from '@/types/api'
 
 interface ProjectDetailResponse {
@@ -173,7 +174,7 @@ export function ProjectSettingsPage() {
   // Assignment
   const [assignmentMode, setAssignmentMode] = useState<string>('Manual')
 
-  type SettingsTab = 'general' | 'email' | 'intake' | 'storage' | 'max' | 'members'
+  type SettingsTab = 'general' | 'email' | 'intake' | 'storage' | 'max' | 'discord' | 'members'
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
 
   const [saved, setSaved] = useState(false)
@@ -465,6 +466,9 @@ export function ProjectSettingsPage() {
           { id: 'storage' as const, label: t('projectSettings.tabStorage', 'Storage'), icon: HardDrive },
           ...(hasPermission('Max.View')
             ? [{ id: 'max' as const, label: t('projectSettings.tabMax', 'Max'), icon: Sparkles }]
+            : []),
+          ...(hasPermission('Discord.View')
+            ? [{ id: 'discord' as const, label: t('projectSettings.tabDiscord', 'Discord'), icon: MessageSquare }]
             : []),
           ...(hasPermission('Members.View')
             ? [{ id: 'members' as const, label: t('projectSettings.tabMembers', 'Members'), icon: Users }]
@@ -1040,7 +1044,7 @@ ${cfMessageLabel}: I'm having trouble logging in to my account.`}
         )}
 
         {/* Save */}
-        {activeTab !== 'members' && activeTab !== 'max' && (
+        {activeTab !== 'members' && activeTab !== 'max' && activeTab !== 'discord' && (
           <div className="flex gap-2">
             <Button type="submit" disabled={updateSettings.isPending}>
               {updateSettings.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -1062,6 +1066,15 @@ ${cfMessageLabel}: I'm having trouble logging in to my account.`}
           projectId={projectId}
           maxSettings={project.settings.max}
           canEdit={hasPermission('Max.Edit')}
+        />
+      )}
+
+      {/* Discord */}
+      {activeTab === 'discord' && hasPermission('Discord.View') && (
+        <DiscordSettingsTab
+          companyId={companyId!}
+          projectId={projectId}
+          canEdit={hasPermission('Discord.Edit')}
         />
       )}
 
