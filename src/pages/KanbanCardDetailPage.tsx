@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link, useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, Trash2, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Trash2, Save, ExternalLink, MessageSquare, Link as LinkIcon } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { RichTextEditor } from '@/components/ui/RichTextEditor'
@@ -18,6 +19,10 @@ import {
   useDeleteKanbanComment,
   useLinkTicket,
   useUnlinkTicket,
+  useLinkStory,
+  useUnlinkStory,
+  useAddExternalSource,
+  useRemoveExternalSource,
 } from '@/hooks/useKanbanBoard'
 import { api } from '@/lib/api'
 import type {
@@ -25,13 +30,34 @@ import type {
   KanbanPriority,
   UserResponse,
   KanbanCardCommentResponse,
+  ExternalSourceType,
 } from '@/types/api'
 import type { ImageUploadResult } from '@/components/ui/RichTextEditor'
 import { cardTypeColors, cardTypeLabels, priorityColors, formatStoryId } from '@/components/Kanban/kanbanStyles'
 import { LinkTicketPicker } from '@/components/Kanban/LinkTicketPicker'
+import { LinkStoryPicker } from '@/components/Kanban/LinkStoryPicker'
+import { ExternalSourcesPicker } from '@/components/Kanban/ExternalSourcesPicker'
+import { MaxStoryInlinePanel } from '@/components/Max/MaxStoryInlinePanel'
 
 const types: KanbanCardType[] = ['Feature', 'Bug', 'Improvement', 'TechDebt']
 const priorities: KanbanPriority[] = ['Low', 'Normal', 'High', 'Urgent']
+
+function externalSourceMeta(type: ExternalSourceType): { label: string; icon: LucideIcon; className: string } {
+  switch (type) {
+    case 'Discord':
+      return {
+        label: 'Discord',
+        icon: MessageSquare,
+        className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+      }
+    default:
+      return {
+        label: type,
+        icon: LinkIcon,
+        className: 'bg-muted text-muted-foreground',
+      }
+  }
+}
 
 export function KanbanCardDetailPage() {
   const params = useParams({ from: '/kanban/stories/$storyNumber' })
@@ -73,6 +99,10 @@ export function KanbanCardDetailPage() {
   const addComment = useAddKanbanComment(companyId, selectedProjectId)
   const linkTicket = useLinkTicket(companyId, selectedProjectId)
   const unlinkTicket = useUnlinkTicket(companyId, selectedProjectId)
+  const linkStory = useLinkStory(companyId, selectedProjectId)
+  const unlinkStory = useUnlinkStory(companyId, selectedProjectId)
+  const addExternalSource = useAddExternalSource(companyId, selectedProjectId)
+  const removeExternalSource = useRemoveExternalSource(companyId, selectedProjectId)
 
   const [title, setTitle] = useState('')
   const [descriptionHtml, setDescriptionHtml] = useState('')
@@ -199,7 +229,7 @@ export function KanbanCardDetailPage() {
       </div>
 
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cardTypeColors[card.type]}`}>
             {cardTypeLabels[card.type]}
           </span>
@@ -211,6 +241,25 @@ export function KanbanCardDetailPage() {
               Resolved
             </span>
           )}
+          {card.externalSources.map((src, i) => {
+            const meta = externalSourceMeta(src.type)
+            const Icon = meta.icon
+            const tooltip = src.authorName ? `Posted by ${src.authorName} in ${meta.label}` : `Open in ${meta.label}`
+            return (
+              <a
+                key={`${src.type}-${src.messageId ?? src.url}-${i}`}
+                href={src.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={tooltip}
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 transition-opacity ${meta.className}`}
+              >
+                <Icon className="h-3 w-3" />
+                From {meta.label}
+                <ExternalLink className="h-3 w-3 opacity-60" />
+              </a>
+            )
+          })}
         </div>
 
         <Input
@@ -220,6 +269,14 @@ export function KanbanCardDetailPage() {
           disabled={!canEdit}
           className="!h-auto !text-2xl !font-bold !px-2 !py-1"
         />
+
+        {hasPermission('Max.View') && companyId && selectedProjectId && (
+          <MaxStoryInlinePanel
+            companyId={companyId}
+            projectId={selectedProjectId}
+            cardId={card.id}
+          />
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
           <div className="space-y-6">
@@ -390,6 +447,28 @@ export function KanbanCardDetailPage() {
               }}
               onRemove={async (ticketId) => {
                 await unlinkTicket.mutateAsync({ cardId: card.id, ticketId })
+              }}
+              disabled={!canEdit}
+            />
+
+            <LinkStoryPicker
+              linkedStories={detail.linkedStories}
+              onAdd={async (v) => {
+                await linkStory.mutateAsync({ cardId: card.id, cardIdOrNumber: v })
+              }}
+              onRemove={async (otherCardId) => {
+                await unlinkStory.mutateAsync({ cardId: card.id, otherCardId })
+              }}
+              disabled={!canEdit}
+            />
+
+            <ExternalSourcesPicker
+              externalSources={card.externalSources}
+              onAdd={async (url) => {
+                await addExternalSource.mutateAsync({ cardId: card.id, url })
+              }}
+              onRemove={async (messageId) => {
+                await removeExternalSource.mutateAsync({ cardId: card.id, messageId })
               }}
               disabled={!canEdit}
             />

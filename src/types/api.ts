@@ -73,11 +73,28 @@ export interface KanbanCardResponse {
   tags: string[]
   assignedToUserId?: string
   linkedTicketIds: string[]
+  linkedStoryIds: string[]
   resolvedOnDateTime: number
   createdOnDateTime: number
   updatedOnDateTime: number
   createdByUserId?: string
   updatedByUserId?: string
+  externalSources: KanbanCardExternalSourceResponse[]
+}
+
+export type ExternalSourceType = 'Discord'
+
+export interface KanbanCardExternalSourceResponse {
+  type: ExternalSourceType
+  url: string
+  guildId?: string
+  channelId?: string
+  threadId?: string
+  messageId?: string
+  threadTitle?: string
+  forumTags: string[]
+  authorName?: string
+  authorExternalId?: string
 }
 
 export interface KanbanCardCommentResponse {
@@ -106,6 +123,7 @@ export interface KanbanCardDetailResponse {
   card: KanbanCardResponse
   comments: KanbanCardCommentResponse[]
   linkedTickets: TicketSummaryResponse[]
+  linkedStories: KanbanStorySummaryResponse[]
 }
 
 export interface KanbanStorySummaryResponse {
@@ -245,11 +263,15 @@ export interface MaxTaskDetailsResponse {
   questionId?: string
   linkToStoryCardNumber?: number
   linkToStoryTitle?: string
+  duplicateOfStoryId?: string
+  duplicateOfStoryCardNumber?: number
+  duplicateOfStoryTitle?: string
 }
 
 export interface MaxTaskResponse {
   id: string
   ticketId: string
+  storyId?: string
   type: string
   status: string
   confidence: number
@@ -261,6 +283,7 @@ export interface MaxTaskResponse {
 export interface MaxQuestionResponse {
   id: string
   sourceTicketId?: string
+  sourceStoryId?: string
   question: string
   contextExcerpt?: string
   status: string
@@ -278,10 +301,14 @@ export interface TicketMaxResponse {
 
 export interface MaxTaskWithTicketResponse {
   task: MaxTaskResponse
-  ticketNumber: number
-  ticketSubject: string
+  // Populated when task.storyId is null/empty — task targets a ticket.
+  ticketNumber?: number
+  ticketSubject?: string
   customerName?: string
   customerEmail?: string
+  // Populated when task.storyId is set — task targets a kanban story.
+  storyCardNumber?: number
+  storyTitle?: string
 }
 
 export interface MaxToneAnalyzerResponse {
@@ -314,4 +341,81 @@ export interface PersonalAccessTokenCreatedResponse extends PersonalAccessTokenR
 export interface CreatePersonalAccessTokenRequest {
   name: string
   expiresOnDateTime?: number
+}
+
+// Discord intake — per-project bot + N (guild, channel) sources.
+export interface DiscordSettings {
+  enabled: boolean
+  botTokenSet: boolean
+  sources: DiscordSourceResponse[]
+}
+
+export interface DiscordSourceResponse {
+  id: string
+  name: string
+  guildId: string
+  channelId: string
+  isForum: boolean
+  /// null = "Auto — let Max decide"
+  defaultCardType: KanbanCardType | null
+  enabled: boolean
+}
+
+export interface DiscordSourceRequest {
+  name: string
+  guildId: string
+  channelId: string
+  isForum: boolean
+  /// null = "Auto — let Max decide"
+  defaultCardType: KanbanCardType | null
+  enabled: boolean
+}
+
+export interface SetDiscordBotTokenRequest {
+  botToken: string
+}
+
+export interface SetDiscordEnabledRequest {
+  enabled: boolean
+}
+
+export interface DiscordGuildSummaryResponse {
+  id: string
+  name: string
+  iconUrl?: string
+}
+
+export interface DiscordChannelSummaryResponse {
+  id: string
+  name: string
+  type: number
+  parentId?: string
+  isForum: boolean
+}
+
+// Story-side Max — parallel to MaxTicketEnrichmentResponse but for kanban cards.
+export interface MaxStoryEnrichmentResponse {
+  id: string
+  storyId: string
+  status: 'processing' | 'complete' | 'failed'
+  category: 'bug' | 'feature' | 'improvement' | 'tech_debt' | 'unclear'
+  summary: string
+  confidence: number
+  duplicateOfStoryId?: string
+  relatedStoryIds: string[]
+  tags: string[]
+  suggestedActionType: 'merge_story_duplicate' | 'investigate' | 'escalated' | 'no_action'
+  suggestedNotes?: string
+  reasoning?: string
+  flaggedQuestion: boolean
+  questionId?: string
+  model: string
+  createdOnDateTime: number
+  updatedOnDateTime: number
+}
+
+export interface StoryMaxResponse {
+  enrichment?: MaxStoryEnrichmentResponse
+  tasks: MaxTaskResponse[]
+  questions: MaxQuestionResponse[]
 }

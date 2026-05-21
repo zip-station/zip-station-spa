@@ -167,3 +167,61 @@ export function useUnlinkTicket(companyId: string | null, projectId: string | nu
     },
   })
 }
+
+export function useLinkStory(companyId: string | null, projectId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { cardId: string; cardIdOrNumber: string }) =>
+      api.post<KanbanCardResponse>(
+        `${boardPath(companyId!, projectId!)}/cards/${params.cardId}/link-story`,
+        { cardIdOrNumber: params.cardIdOrNumber },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
+      qc.invalidateQueries({ queryKey: ['kanbanCardDetail', companyId, projectId] })
+    },
+  })
+}
+
+export function useUnlinkStory(companyId: string | null, projectId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { cardId: string; otherCardId: string }) =>
+      api.delete<KanbanCardResponse>(
+        `${boardPath(companyId!, projectId!)}/cards/${params.cardId}/link-story/${params.otherCardId}`,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
+      qc.invalidateQueries({ queryKey: ['kanbanCardDetail', companyId, projectId] })
+    },
+  })
+}
+
+export function useAddExternalSource(companyId: string | null, projectId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { cardId: string; url: string }) =>
+      api.post<KanbanCardResponse>(
+        `${boardPath(companyId!, projectId!)}/cards/${params.cardId}/external-source`,
+        { url: params.url },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
+      qc.invalidateQueries({ queryKey: ['kanbanCardDetail', companyId, projectId] })
+    },
+  })
+}
+
+export function useRemoveExternalSource(companyId: string | null, projectId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { cardId: string; messageId: string }) =>
+      api.delete<KanbanCardResponse>(
+        `${boardPath(companyId!, projectId!)}/cards/${params.cardId}/external-source/${encodeURIComponent(params.messageId)}`,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
+      qc.invalidateQueries({ queryKey: ['kanbanCardDetail', companyId, projectId] })
+    },
+  })
+}
