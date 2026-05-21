@@ -571,7 +571,38 @@
     "resetConfirmTitle": "Reset Max?",
     "resetConfirmMessage": "This clears Max's project context, tone guide, tone avoid, all instructions, and all example replies for this project. Your API key, the enable toggle, past ticket enrichments, and the audit log are kept. This can't be undone.",
     "resetConfirm": "Yes, reset Max",
-    "resetDone": "Max has been reset. Your API key is unchanged."
+    "resetDone": "Max has been reset. Your API key is unchanged.",
+    "heading": "Max",
+    "tabs": {
+      "tasks": "Tasks",
+      "questions": "Questions"
+    }
+  },
+  "questions": {
+    "subtitle": "Things Max flagged it didn't understand — features, how-tos, or policy. Bugs don't show up here. Answer with promote-to-context on to teach Max for future tickets.",
+    "noProject": "Select a project to see Max's pending questions.",
+    "emptyPending": "No pending questions.",
+    "emptyAnswered": "No answered questions yet.",
+    "emptyDismissed": "No dismissed questions.",
+    "fromTicket": "Ticket #{{n}}",
+    "fromStory": "Story STR-{{n}}",
+    "openSource": "Open",
+    "context": "Context",
+    "yourAnswer": "Your answer",
+    "answerPlaceholder": "What's the answer? Be clear — this may be reused on future tickets.",
+    "promoteToContext": "Add this Q&A to project context so Max learns from it",
+    "promotedBadge": "Added to context",
+    "answer": "Answer",
+    "dismiss": "Dismiss",
+    "answered": "Answered",
+    "dismissed": "Dismissed",
+    "noAnswerStored": "(no answer stored)",
+    "answeredOn": "Answered on {{date}}",
+    "tabs": {
+      "pending": "Pending",
+      "answered": "Answered",
+      "dismissed": "Dismissed"
+    }
   },
   "pat": {
     "title": "Personal Access Tokens",

@@ -322,6 +322,21 @@ export interface MaxToneAnalyzerRequest {
   replyCount?: number
 }
 
+export interface MaxQuestionWithSourceResponse {
+  question: MaxQuestionResponse
+  sourceType: 'ticket' | 'story'
+  ticketNumber?: number
+  ticketSubject?: string
+  customerName?: string
+  storyCardNumber?: number
+  storyTitle?: string
+}
+
+export interface MaxQuestionAnswerRequest {
+  answer: string
+  promoteToContext: boolean
+}
+
 export interface PersonalAccessTokenResponse {
   id: string
   userId: string

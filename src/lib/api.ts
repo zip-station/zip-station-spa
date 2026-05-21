@@ -77,6 +77,7 @@ class ApiClient {
     return this.request<T>(path, { method: 'DELETE' })
   }
 
+
   async downloadBlob(path: string): Promise<Blob> {
     const url = `${this.getBaseUrl()}${path}`
     const headers: Record<string, string> = {}

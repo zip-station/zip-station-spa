@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Sparkles, Check, X as XIcon, Loader2, ArrowRight, Inbox, KanbanSquare } from 'lucide-react'
+import { Check, X as XIcon, Loader2, ArrowRight, Inbox, KanbanSquare } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
@@ -41,16 +41,10 @@ export function MaxTasksPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-start gap-3">
-        <Sparkles className="mt-0.5 h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-semibold">Max</h1>
-          <p className="text-sm text-muted-foreground">
-            Pending suggestions across all tickets and stories. Approve to execute, reject to dismiss.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Pending suggestions across all tickets and stories. Approve to execute, reject to dismiss.
+      </p>
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
