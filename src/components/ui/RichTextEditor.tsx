@@ -6,7 +6,7 @@ import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Undo, Redo, ImagePlus } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Undo, Redo, ImagePlus, Code, Code2 } from 'lucide-react'
 
 export interface ImageUploadResult {
   storageKey: string
@@ -75,7 +75,7 @@ export function RichTextEditor({ content, onChange, onSubmit, placeholder, class
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none dark:prose-invert focus:outline-none min-h-[100px] px-3 py-2',
+        class: 'prose prose-sm max-w-none dark:prose-invert focus:outline-none min-h-[100px] px-3 py-2 break-words [overflow-wrap:anywhere]',
       },
       handleKeyDown: (_view, event) => {
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -185,7 +185,7 @@ export function RichTextEditor({ content, onChange, onSubmit, placeholder, class
   )
 
   return (
-    <div className={`rounded-md border border-input bg-background ${className || ''}`}>
+    <div className={`min-w-0 overflow-hidden rounded-md border border-input bg-background ${className || ''}`}>
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 border-b px-2 py-1">
         <ToolbarButton
@@ -225,6 +225,23 @@ export function RichTextEditor({ content, onChange, onSubmit, placeholder, class
           title="Numbered List"
         >
           <ListOrdered className="h-4 w-4" />
+        </ToolbarButton>
+
+        <div className="mx-1 h-4 w-px bg-border" />
+
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          active={editor.isActive('code')}
+          title="Inline Code"
+        >
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          active={editor.isActive('codeBlock')}
+          title="Code Block"
+        >
+          <Code2 className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="mx-1 h-4 w-px bg-border" />

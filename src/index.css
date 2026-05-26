@@ -99,3 +99,42 @@
 .prose ul ul ul {
   list-style: square;
 }
+
+/* Code blocks and inline code for the rich text editor and rendered bodies.
+   @tailwindcss/typography isn't installed, so `prose` doesn't style these. */
+.ProseMirror pre,
+.prose pre {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  overflow: auto;
+  max-height: 24rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85em;
+  line-height: 1.5;
+  white-space: pre;
+  tab-size: 2;
+}
+.ProseMirror pre code,
+.prose pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-family: inherit;
+  border: none;
+}
+.ProseMirror :not(pre) > code,
+.prose :not(pre) > code {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.25rem;
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85em;
+}

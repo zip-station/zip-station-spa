@@ -208,7 +208,7 @@ export function KanbanCardDetailPage() {
   const isResolved = board?.resolvedColumnId === card.columnId
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <div className="mb-4 flex items-center justify-between gap-3">
         {fromTicket ? (
           <Link
@@ -278,8 +278,8 @@ export function KanbanCardDetailPage() {
           />
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="min-w-0 space-y-6">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Description</label>
@@ -529,7 +529,7 @@ function CommentItem({
   const date = new Date(comment.createdOnDateTime).toLocaleString()
 
   return (
-    <div className={`group rounded-md border px-3 py-2 text-sm ${isSystem ? 'bg-muted/30 italic' : 'bg-background'}`}>
+    <div className={`group min-w-0 overflow-hidden rounded-md border px-3 py-2 text-sm ${isSystem ? 'bg-muted/30 italic' : 'bg-background'}`}>
       <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
         <span className="font-medium">
           {isSystem ? 'System' : authorName ?? 'Someone'}
@@ -569,7 +569,7 @@ function CommentItem({
         )}
       </div>
       <div
-        className="prose prose-sm max-w-none dark:prose-invert"
+        className="prose prose-sm max-w-none dark:prose-invert break-words [overflow-wrap:anywhere]"
         dangerouslySetInnerHTML={{ __html: comment.bodyHtml }}
       />
     </div>
