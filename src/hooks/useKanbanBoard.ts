@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type {
   KanbanBoardResponse,
@@ -50,6 +50,10 @@ export function useKanbanCards(companyId: string | null, projectId: string | nul
     queryFn: () =>
       api.get<KanbanCardResponse[]>(`${boardPath(companyId!, projectId!)}/cards${buildCardQuery(filters)}`),
     enabled: !!companyId && !!projectId,
+    // Keep the previous results on screen while a new filter/search query loads.
+    // Without this, changing `filters` swaps to a fresh (empty) query, cardsLoading
+    // flips true, and KanbanPage unmounts the search bar mid-keystroke (focus loss).
+    placeholderData: keepPreviousData,
   })
 }
 
