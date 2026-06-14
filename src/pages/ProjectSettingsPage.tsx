@@ -11,6 +11,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/lib/api'
+import { getConfig } from '@/lib/config'
 import { MaxSettingsTab } from '@/components/Max/MaxSettingsTab'
 import { DiscordSettingsTab } from '@/components/Discord/DiscordSettingsTab'
 import type { MaxSettings } from '@/types/api'
@@ -1298,6 +1299,10 @@ function ApiKeysSection({ companyId, projectId }: { companyId: string; projectId
 
   const formatDate = (ts: number) => ts ? new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''
 
+  const apiBaseUrl = (() => {
+    try { return getConfig().apiUrl } catch { return import.meta.env.VITE_API_URL || 'http://localhost:5100' }
+  })().replace(/\/$/, '')
+
   return (
     <div className="mt-8 rounded-lg border bg-card p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -1385,7 +1390,7 @@ function ApiKeysSection({ companyId, projectId }: { companyId: string; projectId
       {keys && keys.length > 0 && (
         <div className="mt-4 rounded-md border bg-muted/50 p-3">
           <p className="text-xs font-medium text-muted-foreground mb-1">Usage example:</p>
-          <pre className="text-xs font-mono whitespace-pre-wrap">{`curl -X POST http://localhost:5100/api/v1/public/intake \\
+          <pre className="text-xs font-mono whitespace-pre-wrap">{`curl -X POST ${apiBaseUrl}/api/v1/public/intake \\
   -H "Content-Type: application/json" \\
   -H "X-Api-Key: YOUR_KEY" \\
   -d '{"email":"customer@example.com","name":"Jane","message":"Help!"}'`}</pre>
