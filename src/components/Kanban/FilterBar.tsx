@@ -43,7 +43,7 @@ export function FilterBar({ filters, onChange, members, availableTags }: FilterB
             type="text"
             value={filters.query}
             onChange={(e) => onChange({ ...filters, query: e.target.value })}
-            placeholder="Search stories..."
+            placeholder="Search stories or paste a source link..."
             className="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm"
           />
         </div>
