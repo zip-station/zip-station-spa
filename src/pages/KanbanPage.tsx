@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useKanbanStore } from '@/store/kanbanStore'
 import {
   useKanbanBoard,
   useKanbanCards,
@@ -40,6 +41,8 @@ export function KanbanPage() {
   const { companyId } = useCurrentUser()
   const { selectedProjectId, projects } = useSelectedProject()
   const { hasPermission } = usePermissions()
+  const collapsedColumnIds = useKanbanStore((s) => s.collapsedColumnIds)
+  const toggleColumnCollapsed = useKanbanStore((s) => s.toggleColumnCollapsed)
 
   const canEdit = hasPermission('Kanban.Edit')
 
@@ -260,7 +263,10 @@ export function KanbanPage() {
                 cards={cardsByColumn[column.id] ?? []}
                 userNamesById={userNamesById}
                 isResolvedColumn={column.id === board.resolvedColumnId}
+                collapsed={collapsedColumnIds.includes(column.id)}
+                scrollScope={selectedProjectId}
                 onAddCard={(id) => canEdit && setCreateForColumnId(id)}
+                onToggleCollapse={toggleColumnCollapsed}
               />
             ))}
         </div>
