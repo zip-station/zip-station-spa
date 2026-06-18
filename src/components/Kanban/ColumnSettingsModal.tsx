@@ -26,12 +26,14 @@ interface ColumnSettingsModalProps {
   open: boolean
   columns: KanbanColumnResponse[]
   resolvedColumnId: string
+  intakeColumnId: string
   customCardTypes: KanbanCardTypeResponse[]
   maxColumns: number
   onClose: () => void
   onSave: (
     columns: Array<{ id?: string; name: string; color?: string }>,
     resolvedColumnId: string,
+    intakeColumnId: string,
     cardTypes: Array<{ id?: string; label: string; color?: string }>,
   ) => Promise<void> | void
 }
@@ -40,6 +42,7 @@ export function ColumnSettingsModal({
   open,
   columns,
   resolvedColumnId,
+  intakeColumnId,
   customCardTypes,
   maxColumns,
   onClose,
@@ -48,6 +51,7 @@ export function ColumnSettingsModal({
   const [drafts, setDrafts] = useState<ColumnDraft[]>([])
   const [typeDrafts, setTypeDrafts] = useState<CardTypeDraft[]>([])
   const [resolved, setResolved] = useState<string>(resolvedColumnId)
+  const [intake, setIntake] = useState<string>(intakeColumnId)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,9 +64,10 @@ export function ColumnSettingsModal({
         customCardTypes.map((t, i) => ({ id: t.id, label: t.label, color: t.color, key: t.id ?? `type-${i}` })),
       )
       setResolved(resolvedColumnId)
+      setIntake(intakeColumnId)
       setError(null)
     }
-  }, [open, columns, customCardTypes, resolvedColumnId])
+  }, [open, columns, customCardTypes, resolvedColumnId, intakeColumnId])
 
   if (!open) return null
 
@@ -82,6 +87,10 @@ export function ColumnSettingsModal({
     const toRemove = drafts[index]
     if (toRemove.id && toRemove.id === resolved) {
       setError('Pick a different resolved column before removing this one.')
+      return
+    }
+    if (toRemove.id && toRemove.id === intake) {
+      setError('Pick a different intake column before removing this one.')
       return
     }
     setDrafts((prev) => prev.filter((_, i) => i !== index))
@@ -145,7 +154,11 @@ export function ColumnSettingsModal({
       if (!drafts.some((d) => d.id === resolvedId)) {
         resolvedId = drafts[drafts.length - 1].id ?? ''
       }
-      await onSave(payload, resolvedId, typePayload)
+      let intakeId = intake
+      if (!drafts.some((d) => d.id === intakeId)) {
+        intakeId = drafts[0].id ?? ''
+      }
+      await onSave(payload, resolvedId, intakeId, typePayload)
       onClose()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to save board settings')
@@ -175,8 +188,13 @@ export function ColumnSettingsModal({
           {/* Columns */}
           <section className="space-y-2">
             <h4 className="text-sm font-semibold text-muted-foreground">Columns</h4>
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">Intake</span> is where new cards from Discord and Max land.{' '}
+              <span className="font-medium">Resolved</span> marks a card done.
+            </p>
             {drafts.map((draft, index) => {
               const isResolved = draft.id && draft.id === resolved
+              const isIntake = draft.id && draft.id === intake
               return (
                 <div key={draft.key} className="flex items-center gap-2 rounded-md border bg-background p-2">
                   <div className="flex flex-col">
@@ -212,6 +230,16 @@ export function ColumnSettingsModal({
                     className="flex-1"
                     placeholder="Column name"
                   />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs">
+                    <input
+                      type="radio"
+                      checked={!!isIntake}
+                      onChange={() => draft.id && setIntake(draft.id)}
+                      disabled={!draft.id}
+                      title={draft.id ? 'Mark as intake column (new Discord/Max cards land here)' : 'Save first to mark intake'}
+                    />
+                    Intake
+                  </label>
                   <label className="flex shrink-0 items-center gap-1.5 text-xs">
                     <input
                       type="radio"

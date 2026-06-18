@@ -291,11 +291,12 @@ export function KanbanPage() {
         open={columnsOpen}
         columns={board.columns}
         resolvedColumnId={board.resolvedColumnId}
+        intakeColumnId={board.intakeColumnId}
         customCardTypes={board.customCardTypes}
         maxColumns={8}
         onClose={() => setColumnsOpen(false)}
-        onSave={async (columns, resolvedColumnId, cardTypes) => {
-          await updateColumns.mutateAsync({ columns, resolvedColumnId, cardTypes })
+        onSave={async (columns, resolvedColumnId, intakeColumnId, cardTypes) => {
+          await updateColumns.mutateAsync({ columns, resolvedColumnId, intakeColumnId, cardTypes })
         }}
       />
 

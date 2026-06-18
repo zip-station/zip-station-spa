@@ -69,6 +69,7 @@ export interface KanbanBoardResponse {
   projectId: string
   columns: KanbanColumnResponse[]
   resolvedColumnId: string
+  intakeColumnId: string
   customCardTypes: KanbanCardTypeResponse[]
   createdOnDateTime: number
   updatedOnDateTime: number
@@ -181,6 +182,8 @@ export interface UpdateKanbanCardRequest {
 export interface UpdateKanbanColumnsRequest {
   columns: Array<{ id?: string; name: string; color?: string }>
   resolvedColumnId: string
+  /** Column automated intake (Discord/Max) drops new cards into. Omit to leave it unchanged. */
+  intakeColumnId?: string
   /** Custom story types to persist. Omit to leave the board's existing custom types unchanged. */
   cardTypes?: Array<{ id?: string; label: string; color?: string }>
 }
