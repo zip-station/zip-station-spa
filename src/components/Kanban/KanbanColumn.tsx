@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useRef } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { KanbanCardResponse, KanbanColumnResponse } from '@/types/api'
+import type { KanbanCardResponse, KanbanColumnResponse, KanbanCardTypeResponse } from '@/types/api'
 import { KanbanCardTile } from './KanbanCardTile'
 
 // In-memory scroll memory keyed by project + column. Survives SPA navigation (opening a card
@@ -16,6 +16,7 @@ interface KanbanColumnProps {
   isResolvedColumn?: boolean
   collapsed?: boolean
   scrollScope?: string
+  customCardTypes?: KanbanCardTypeResponse[]
   onAddCard: (columnId: string) => void
   onToggleCollapse: (columnId: string) => void
 }
@@ -27,6 +28,7 @@ export function KanbanColumn({
   isResolvedColumn,
   collapsed,
   scrollScope,
+  customCardTypes,
   onAddCard,
   onToggleCollapse,
 }: KanbanColumnProps) {
@@ -143,6 +145,7 @@ export function KanbanColumn({
               key={card.id}
               card={card}
               assigneeName={card.assignedToUserId ? userNamesById.get(card.assignedToUserId) : undefined}
+              customCardTypes={customCardTypes}
             />
           ))}
         </SortableContext>

@@ -37,7 +37,15 @@ export interface CreateProjectRequest {
   supportEmailAddress: string
 }
 
-export type KanbanCardType = 'Feature' | 'Bug' | 'Improvement' | 'TechDebt'
+/** The four always-available built-in story types. */
+export type BuiltInCardType = 'Feature' | 'Bug' | 'Improvement' | 'TechDebt'
+export const BUILTIN_CARD_TYPES: BuiltInCardType[] = ['Feature', 'Bug', 'Improvement', 'TechDebt']
+
+/**
+ * A card's story type: either a built-in name (e.g. 'Feature') or the id of a project-specific
+ * custom type defined on the board (`KanbanBoardResponse.customCardTypes`).
+ */
+export type KanbanCardType = string
 export type KanbanPriority = 'Low' | 'Normal' | 'High' | 'Urgent'
 export type KanbanCommentType = 'User' | 'System'
 
@@ -48,12 +56,20 @@ export interface KanbanColumnResponse {
   position: number
 }
 
+/** A project-specific story type, in addition to the built-ins. */
+export interface KanbanCardTypeResponse {
+  id: string
+  label: string
+  color?: string
+}
+
 export interface KanbanBoardResponse {
   id: string
   companyId: string
   projectId: string
   columns: KanbanColumnResponse[]
   resolvedColumnId: string
+  customCardTypes: KanbanCardTypeResponse[]
   createdOnDateTime: number
   updatedOnDateTime: number
 }
@@ -82,7 +98,7 @@ export interface KanbanCardResponse {
   externalSources: KanbanCardExternalSourceResponse[]
 }
 
-export type ExternalSourceType = 'Discord'
+export type ExternalSourceType = 'Discord' | 'Link'
 
 export interface KanbanCardExternalSourceResponse {
   type: ExternalSourceType
@@ -165,6 +181,8 @@ export interface UpdateKanbanCardRequest {
 export interface UpdateKanbanColumnsRequest {
   columns: Array<{ id?: string; name: string; color?: string }>
   resolvedColumnId: string
+  /** Custom story types to persist. Omit to leave the board's existing custom types unchanged. */
+  cardTypes?: Array<{ id?: string; label: string; color?: string }>
 }
 
 export type MaxInstructionContext = 'enrichment' | 'reply' | 'code' | 'chat' | 'all'

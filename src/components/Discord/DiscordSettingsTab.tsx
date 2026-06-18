@@ -17,9 +17,9 @@ import {
   useDiscordGuilds,
   useDiscordChannels,
 } from '@/hooks/useDiscord'
+import { useKanbanBoard } from '@/hooks/useKanbanBoard'
+import { cardTypeOptions, getCardTypeLabel } from '@/components/Kanban/kanbanStyles'
 import type { DiscordSourceRequest, DiscordSourceResponse, KanbanCardType } from '@/types/api'
-
-const CARD_TYPES: KanbanCardType[] = ['Feature', 'Bug', 'Improvement', 'TechDebt']
 
 // Sentinel for the dropdown — null in storage means "Auto, let Max decide".
 const AUTO_TYPE = '__auto__' as const
@@ -273,6 +273,10 @@ function SourcesSection({
   const create = useAddDiscordSource(companyId, projectId)
   const update = useUpdateDiscordSource(companyId, projectId)
   const remove = useDeleteDiscordSource(companyId, projectId)
+  const { data: board } = useKanbanBoard(companyId, projectId)
+
+  const customCardTypes = board?.customCardTypes ?? []
+  const typeOptions = cardTypeOptions(customCardTypes)
 
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -415,7 +419,7 @@ function SourcesSection({
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value={AUTO_TYPE}>Auto — let Max decide</option>
-                  {CARD_TYPES.map((t) => <option key={t} value={t}>{t === 'TechDebt' ? 'Tech Debt' : t}</option>)}
+                  {typeOptions.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </Field>
             </div>
@@ -438,7 +442,7 @@ function SourcesSection({
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value={AUTO_TYPE}>Auto — let Max decide</option>
-                  {CARD_TYPES.map((t) => <option key={t} value={t}>{t === 'TechDebt' ? 'Tech Debt' : t}</option>)}
+                  {typeOptions.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </Field>
               <Field label="Guild (server) ID">
@@ -509,7 +513,7 @@ function SourcesSection({
                 {!s.enabled && <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Paused</span>}
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{s.isForum ? 'Forum' : 'Text'}</span>
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                  {s.defaultCardType === null ? 'Auto type' : s.defaultCardType === 'TechDebt' ? 'Tech Debt' : s.defaultCardType}
+                  {!s.defaultCardType ? 'Auto type' : getCardTypeLabel(s.defaultCardType, customCardTypes)}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground font-mono mt-1">

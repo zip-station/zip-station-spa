@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Search, Filter, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import type { KanbanCardType, UserResponse } from '@/types/api'
+import type { KanbanCardType, KanbanCardTypeResponse, UserResponse } from '@/types/api'
+import { cardTypeOptions } from './kanbanStyles'
 
 export interface KanbanFilters {
   query: string
@@ -17,10 +18,12 @@ interface FilterBarProps {
   onChange: (next: KanbanFilters) => void
   members: UserResponse[]
   availableTags: string[]
+  customCardTypes?: KanbanCardTypeResponse[]
 }
 
-export function FilterBar({ filters, onChange, members, availableTags }: FilterBarProps) {
+export function FilterBar({ filters, onChange, members, availableTags, customCardTypes }: FilterBarProps) {
   const [open, setOpen] = useState(false)
+  const typeOptions = cardTypeOptions(customCardTypes)
 
   const activeCount =
     (filters.query ? 1 : 0) +
@@ -65,10 +68,9 @@ export function FilterBar({ filters, onChange, members, availableTags }: FilterB
           className="h-9 rounded-md border border-input bg-background px-2 text-sm"
         >
           <option value="">All types</option>
-          <option value="Feature">Feature</option>
-          <option value="Bug">Bug</option>
-          <option value="Improvement">Improvement</option>
-          <option value="TechDebt">Tech Debt</option>
+          {typeOptions.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
         </select>
         <select
           value={filters.hasLinkedTickets}
@@ -158,10 +160,9 @@ export function FilterBar({ filters, onChange, members, availableTags }: FilterB
                   className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
                 >
                   <option value="">All types</option>
-                  <option value="Feature">Feature</option>
-                  <option value="Bug">Bug</option>
-                  <option value="Improvement">Improvement</option>
-                  <option value="TechDebt">Tech Debt</option>
+                  {typeOptions.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
               <div>

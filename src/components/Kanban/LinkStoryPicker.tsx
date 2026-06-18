@@ -4,7 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import type { KanbanStorySummaryResponse } from '@/types/api'
-import { cardTypeColors, cardTypeLabels, formatStoryId } from './kanbanStyles'
+import { getCardTypeBadge, formatStoryId } from './kanbanStyles'
 
 interface LinkStoryPickerProps {
   linkedStories: KanbanStorySummaryResponse[]
@@ -56,8 +56,11 @@ export function LinkStoryPicker({ linkedStories, onAdd, onRemove, disabled }: Li
                   >
                     {formatStoryId(s.cardNumber)}
                   </Link>
-                  <span className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${cardTypeColors[s.type]}`}>
-                    {cardTypeLabels[s.type]}
+                  <span
+                    className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${getCardTypeBadge(s.type).className}`}
+                    style={getCardTypeBadge(s.type).style}
+                  >
+                    {getCardTypeBadge(s.type).label}
                   </span>
                   {s.columnName && (
                     <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">

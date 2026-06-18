@@ -33,13 +33,12 @@ import type {
   ExternalSourceType,
 } from '@/types/api'
 import type { ImageUploadResult } from '@/components/ui/RichTextEditor'
-import { cardTypeColors, cardTypeLabels, priorityColors, formatStoryId } from '@/components/Kanban/kanbanStyles'
+import { getCardTypeBadge, cardTypeOptions, priorityColors, formatStoryId } from '@/components/Kanban/kanbanStyles'
 import { LinkTicketPicker } from '@/components/Kanban/LinkTicketPicker'
 import { LinkStoryPicker } from '@/components/Kanban/LinkStoryPicker'
 import { ExternalSourcesPicker } from '@/components/Kanban/ExternalSourcesPicker'
 import { MaxStoryInlinePanel } from '@/components/Max/MaxStoryInlinePanel'
 
-const types: KanbanCardType[] = ['Feature', 'Bug', 'Improvement', 'TechDebt']
 const priorities: KanbanPriority[] = ['Low', 'Normal', 'High', 'Urgent']
 
 function externalSourceMeta(type: ExternalSourceType): { label: string; icon: LucideIcon; className: string } {
@@ -52,10 +51,20 @@ function externalSourceMeta(type: ExternalSourceType): { label: string; icon: Lu
       }
     default:
       return {
-        label: type,
+        label: 'Link',
         icon: LinkIcon,
         className: 'bg-muted text-muted-foreground',
       }
+  }
+}
+
+// For a generic link chip, prefer the hostname (e.g. "x.com") over the bare word "Link".
+function externalSourceLabel(type: ExternalSourceType, url: string): string {
+  if (type === 'Discord') return 'Discord'
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return 'Link'
   }
 }
 
@@ -230,9 +239,17 @@ export function KanbanCardDetailPage() {
 
       <div className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cardTypeColors[card.type]}`}>
-            {cardTypeLabels[card.type]}
-          </span>
+          {(() => {
+            const badge = getCardTypeBadge(card.type, board?.customCardTypes)
+            return (
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}
+                style={badge.style}
+              >
+                {badge.label}
+              </span>
+            )
+          })()}
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[card.priority]}`}>
             {card.priority}
           </span>
@@ -244,7 +261,8 @@ export function KanbanCardDetailPage() {
           {card.externalSources.map((src, i) => {
             const meta = externalSourceMeta(src.type)
             const Icon = meta.icon
-            const tooltip = src.authorName ? `Posted by ${src.authorName} in ${meta.label}` : `Open in ${meta.label}`
+            const label = externalSourceLabel(src.type, src.url)
+            const tooltip = src.authorName ? `Posted by ${src.authorName} in ${label}` : `Open in ${label}`
             return (
               <a
                 key={`${src.type}-${src.messageId ?? src.url}-${i}`}
@@ -255,7 +273,7 @@ export function KanbanCardDetailPage() {
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 transition-opacity ${meta.className}`}
               >
                 <Icon className="h-3 w-3" />
-                From {meta.label}
+                From {label}
                 <ExternalLink className="h-3 w-3 opacity-60" />
               </a>
             )
@@ -366,7 +384,9 @@ export function KanbanCardDetailPage() {
                 disabled={!canEdit}
                 className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
               >
-                {types.map((t) => <option key={t} value={t}>{t === 'TechDebt' ? 'Tech Debt' : t}</option>)}
+                {cardTypeOptions(board?.customCardTypes).map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
               </select>
             </Field>
 
@@ -467,8 +487,8 @@ export function KanbanCardDetailPage() {
               onAdd={async (url) => {
                 await addExternalSource.mutateAsync({ cardId: card.id, url })
               }}
-              onRemove={async (messageId) => {
-                await removeExternalSource.mutateAsync({ cardId: card.id, messageId })
+              onRemove={async (url) => {
+                await removeExternalSource.mutateAsync({ cardId: card.id, url })
               }}
               disabled={!canEdit}
             />

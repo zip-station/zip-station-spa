@@ -219,9 +219,9 @@ export function useAddExternalSource(companyId: string | null, projectId: string
 export function useRemoveExternalSource(companyId: string | null, projectId: string | null) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (params: { cardId: string; messageId: string }) =>
+    mutationFn: (params: { cardId: string; url: string }) =>
       api.delete<KanbanCardResponse>(
-        `${boardPath(companyId!, projectId!)}/cards/${params.cardId}/external-source/${encodeURIComponent(params.messageId)}`,
+        `${boardPath(companyId!, projectId!)}/cards/${params.cardId}/external-source?url=${encodeURIComponent(params.url)}`,
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })

@@ -2,16 +2,18 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Link as LinkIcon, MessageSquare } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
-import type { KanbanCardResponse } from '@/types/api'
-import { cardTypeColors, cardTypeLabels, priorityColors, formatStoryId } from './kanbanStyles'
+import type { KanbanCardResponse, KanbanCardTypeResponse } from '@/types/api'
+import { getCardTypeBadge, priorityColors, formatStoryId } from './kanbanStyles'
 
 interface KanbanCardTileProps {
   card: KanbanCardResponse
   assigneeName?: string
   isDragging?: boolean
+  customCardTypes?: KanbanCardTypeResponse[]
 }
 
-export function KanbanCardTile({ card, assigneeName, isDragging }: KanbanCardTileProps) {
+export function KanbanCardTile({ card, assigneeName, isDragging, customCardTypes }: KanbanCardTileProps) {
+  const typeBadge = getCardTypeBadge(card.type, customCardTypes)
   const {
     attributes,
     listeners,
@@ -46,9 +48,10 @@ export function KanbanCardTile({ card, assigneeName, isDragging }: KanbanCardTil
       >
         <div className="mb-2 flex items-center gap-2">
           <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cardTypeColors[card.type]}`}
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeBadge.className}`}
+            style={typeBadge.style}
           >
-            {cardTypeLabels[card.type]}
+            {typeBadge.label}
           </span>
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[card.priority]}`}

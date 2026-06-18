@@ -225,8 +225,14 @@ export function KanbanPage() {
           </p>
         </div>
         {canEdit && (
-          <Button variant="outline" size="sm" onClick={() => setColumnsOpen(true)}>
-            <SettingsIcon className="mr-2 h-4 w-4" /> Columns
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setColumnsOpen(true)}
+            title="Board settings"
+            aria-label="Board settings"
+          >
+            <SettingsIcon className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -237,6 +243,7 @@ export function KanbanPage() {
           onChange={setFilters}
           members={members ?? []}
           availableTags={availableTags}
+          customCardTypes={board.customCardTypes}
         />
       </div>
 
@@ -259,6 +266,7 @@ export function KanbanPage() {
                 isResolvedColumn={column.id === board.resolvedColumnId}
                 collapsed={collapsedColumnIds.includes(column.id)}
                 scrollScope={selectedProjectId}
+                customCardTypes={board.customCardTypes}
                 onAddCard={(id) => canEdit && setCreateForColumnId(id)}
                 onToggleCollapse={toggleColumnCollapsed}
               />
@@ -273,6 +281,7 @@ export function KanbanPage() {
                 activeCard.assignedToUserId ? userNamesById.get(activeCard.assignedToUserId) : undefined
               }
               isDragging
+              customCardTypes={board.customCardTypes}
             />
           ) : null}
         </DragOverlay>
@@ -282,10 +291,11 @@ export function KanbanPage() {
         open={columnsOpen}
         columns={board.columns}
         resolvedColumnId={board.resolvedColumnId}
+        customCardTypes={board.customCardTypes}
         maxColumns={8}
         onClose={() => setColumnsOpen(false)}
-        onSave={async (columns, resolvedColumnId) => {
-          await updateColumns.mutateAsync({ columns, resolvedColumnId })
+        onSave={async (columns, resolvedColumnId, cardTypes) => {
+          await updateColumns.mutateAsync({ columns, resolvedColumnId, cardTypes })
         }}
       />
 
@@ -293,6 +303,7 @@ export function KanbanPage() {
         open={createForColumnId !== null}
         columnId={createForColumnId ?? ''}
         members={members ?? []}
+        customCardTypes={board.customCardTypes}
         onClose={() => setCreateForColumnId(null)}
         onCreate={handleCreate}
       />

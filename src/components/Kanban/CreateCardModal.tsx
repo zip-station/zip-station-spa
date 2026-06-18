@@ -2,20 +2,28 @@ import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import type { CreateKanbanCardRequest, KanbanCardType, KanbanPriority, UserResponse } from '@/types/api'
+import type {
+  CreateKanbanCardRequest,
+  KanbanCardType,
+  KanbanCardTypeResponse,
+  KanbanPriority,
+  UserResponse,
+} from '@/types/api'
+import { cardTypeOptions } from './kanbanStyles'
 
 interface CreateCardModalProps {
   open: boolean
   columnId: string
   members: UserResponse[]
+  customCardTypes?: KanbanCardTypeResponse[]
   onClose: () => void
   onCreate: (data: CreateKanbanCardRequest) => Promise<void>
 }
 
-const types: KanbanCardType[] = ['Feature', 'Bug', 'Improvement', 'TechDebt']
 const priorities: KanbanPriority[] = ['Low', 'Normal', 'High', 'Urgent']
 
-export function CreateCardModal({ open, columnId, members, onClose, onCreate }: CreateCardModalProps) {
+export function CreateCardModal({ open, columnId, members, customCardTypes, onClose, onCreate }: CreateCardModalProps) {
+  const typeOptions = cardTypeOptions(customCardTypes)
   const [title, setTitle] = useState('')
   const [type, setType] = useState<KanbanCardType>('Feature')
   const [priority, setPriority] = useState<KanbanPriority>('Normal')
@@ -105,9 +113,9 @@ export function CreateCardModal({ open, columnId, members, onClose, onCreate }: 
                 onChange={(e) => setType(e.target.value as KanbanCardType)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                {types.map((t) => (
-                  <option key={t} value={t}>
-                    {t === 'TechDebt' ? 'Tech Debt' : t}
+                {typeOptions.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
                   </option>
                 ))}
               </select>

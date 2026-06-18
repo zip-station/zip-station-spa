@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { api } from '@/lib/api'
 import type { KanbanStorySummaryResponse } from '@/types/api'
-import { cardTypeColors, cardTypeLabels, formatStoryId } from './kanbanStyles'
+import { getCardTypeBadge, formatStoryId } from './kanbanStyles'
 
 interface LinkedStoriesSectionProps {
   companyId: string
@@ -88,8 +88,11 @@ export function LinkedStoriesSection({ companyId, ticketId, canEdit }: LinkedSto
                 className="min-w-0 flex-1 hover:underline"
               >
                 <div className="flex items-center gap-2">
-                  <span className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${cardTypeColors[s.type]}`}>
-                    {cardTypeLabels[s.type]}
+                  <span
+                    className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${getCardTypeBadge(s.type).className}`}
+                    style={getCardTypeBadge(s.type).style}
+                  >
+                    {getCardTypeBadge(s.type).label}
                   </span>
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">{formatStoryId(s.cardNumber)}</span>
                   <span className="truncate text-sm">{s.title}</span>
@@ -216,8 +219,11 @@ function StoryPicker({ companyId, excludeIds, onPick, onClose, isLinking }: Stor
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${cardTypeColors[s.type]}`}>
-                          {cardTypeLabels[s.type]}
+                        <span
+                          className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${getCardTypeBadge(s.type).className}`}
+                          style={getCardTypeBadge(s.type).style}
+                        >
+                          {getCardTypeBadge(s.type).label}
                         </span>
                         <span className="font-mono text-xs text-muted-foreground">{formatStoryId(s.cardNumber)}</span>
                         <span className="truncate text-sm font-medium">{s.title}</span>

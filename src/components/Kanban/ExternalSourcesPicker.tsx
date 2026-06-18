@@ -8,7 +8,7 @@ import type { ExternalSourceType, KanbanCardExternalSourceResponse } from '@/typ
 interface ExternalSourcesPickerProps {
   externalSources: KanbanCardExternalSourceResponse[]
   onAdd: (url: string) => Promise<void>
-  onRemove: (messageId: string) => Promise<void>
+  onRemove: (url: string) => Promise<void>
   disabled?: boolean
 }
 
@@ -22,10 +22,19 @@ function meta(type: ExternalSourceType): { label: string; icon: LucideIcon; clas
       }
     default:
       return {
-        label: type,
+        label: 'Link',
         icon: LinkIcon,
         className: 'bg-muted text-muted-foreground',
       }
+  }
+}
+
+// For generic links, show the hostname (e.g. "github.com") instead of the bare "Link" word.
+function hostnameOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return null
   }
 }
 
@@ -63,8 +72,9 @@ export function ExternalSourcesPicker({ externalSources, onAdd, onRemove, disabl
           {externalSources.map((src, i) => {
             const m = meta(src.type)
             const Icon = m.icon
-            // messageId is the natural unique key; fall back to index when a stray entry lacks one.
-            const removeKey = src.messageId ?? `${src.type}-${i}`
+            const label = src.type === 'Discord' ? m.label : (hostnameOf(src.url) ?? m.label)
+            // URL is the unique key for every source type; fall back to index for a stray empty one.
+            const removeKey = src.url || `${src.type}-${i}`
             return (
               <li
                 key={removeKey}
@@ -73,7 +83,7 @@ export function ExternalSourcesPicker({ externalSources, onAdd, onRemove, disabl
                 <div className="flex items-center justify-between gap-2">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${m.className}`}>
                     <Icon className="h-3 w-3" />
-                    {m.label}
+                    {label}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
                     <a
@@ -85,10 +95,10 @@ export function ExternalSourcesPicker({ externalSources, onAdd, onRemove, disabl
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
-                    {!disabled && src.messageId && (
+                    {!disabled && src.url && (
                       <button
                         type="button"
-                        onClick={() => onRemove(src.messageId!)}
+                        onClick={() => onRemove(src.url)}
                         className="text-muted-foreground hover:text-destructive"
                         title="Unlink"
                       >
@@ -119,7 +129,7 @@ export function ExternalSourcesPicker({ externalSources, onAdd, onRemove, disabl
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Paste a Discord URL"
+            placeholder="Paste any link (Discord, X, GitHub, docs…)"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()
