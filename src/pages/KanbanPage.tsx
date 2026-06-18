@@ -33,7 +33,7 @@ import { KanbanColumn } from '@/components/Kanban/KanbanColumn'
 import { KanbanCardTile } from '@/components/Kanban/KanbanCardTile'
 import { ColumnSettingsModal } from '@/components/Kanban/ColumnSettingsModal'
 import { CreateCardModal } from '@/components/Kanban/CreateCardModal'
-import { FilterBar, type KanbanFilters } from '@/components/Kanban/FilterBar'
+import { FilterBar } from '@/components/Kanban/FilterBar'
 
 const POSITION_STEP = 1000
 
@@ -43,17 +43,11 @@ export function KanbanPage() {
   const { hasPermission } = usePermissions()
   const collapsedColumnIds = useKanbanStore((s) => s.collapsedColumnIds)
   const toggleColumnCollapsed = useKanbanStore((s) => s.toggleColumnCollapsed)
+  const filters = useKanbanStore((s) => s.filters)
+  const setFilters = useKanbanStore((s) => s.setFilters)
 
   const canEdit = hasPermission('Kanban.Edit')
 
-  const [filters, setFilters] = useState<KanbanFilters>({
-    query: '',
-    assignedTo: '',
-    type: '',
-    tags: [],
-    hasLinkedTickets: 'any',
-    includeArchived: false,
-  })
   const [activeId, setActiveId] = useState<string | null>(null)
   const [localOverrides, setLocalOverrides] = useState<Record<string, { columnId: string; position: number }>>({})
   const [columnsOpen, setColumnsOpen] = useState(false)
