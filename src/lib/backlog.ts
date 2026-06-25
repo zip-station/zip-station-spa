@@ -20,6 +20,7 @@ export function buildBacklogQuery(filters: BacklogFilters): string {
   filters.projectIds?.forEach((id) => parts.push(`projectIds=${encodeURIComponent(id)}`))
   filters.boardIds?.forEach((id) => parts.push(`boardIds=${encodeURIComponent(id)}`))
   filters.status?.forEach((s) => parts.push(`status=${encodeURIComponent(s)}`))
+  if (filters.columnId) parts.push(`columnId=${encodeURIComponent(filters.columnId)}`)
   if (filters.type) parts.push(`type=${encodeURIComponent(filters.type)}`)
   if (filters.priority) parts.push(`priority=${encodeURIComponent(filters.priority)}`)
   filters.tags?.forEach((t) => parts.push(`tags=${encodeURIComponent(t)}`))

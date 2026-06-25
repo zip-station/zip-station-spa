@@ -33,7 +33,7 @@ import type {
   ExternalSourceType,
 } from '@/types/api'
 import type { ImageUploadResult } from '@/components/ui/RichTextEditor'
-import { getCardTypeBadge, cardTypeOptions, priorityColors, formatStoryId } from '@/components/Kanban/kanbanStyles'
+import { getCardTypeBadge, cardTypeOptions, priorityColors, formatStoryId, statusColors, statusLabels } from '@/components/Kanban/kanbanStyles'
 import { useKanbanStore } from '@/store/kanbanStore'
 import { LinkTicketPicker } from '@/components/Kanban/LinkTicketPicker'
 import { LinkStoryPicker } from '@/components/Kanban/LinkStoryPicker'
@@ -359,7 +359,26 @@ export function KanbanCardDetailPage() {
           </div>
 
           <aside className="space-y-5 rounded-lg border bg-muted/30 p-4">
-            <Field label="Status (column)">
+            <Field label="Lifecycle">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[card.status]}`}>
+                  {statusLabels[card.status]}
+                </span>
+                {canEdit && (
+                  card.status === 'Obsolete' || card.status === 'Archived' ? (
+                    <Button variant="outline" size="sm" onClick={() => saveField({ status: 'Backlog' })}>
+                      Restore to backlog
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => saveField({ status: 'Obsolete' })}>
+                      Mark obsolete
+                    </Button>
+                  )
+                )}
+              </div>
+            </Field>
+
+            <Field label="Column">
               <select
                 value={columnId}
                 onChange={(e) => {

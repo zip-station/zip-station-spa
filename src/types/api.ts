@@ -200,6 +200,7 @@ export interface BacklogFilters {
   projectIds?: string[]
   boardIds?: string[]
   status?: KanbanStoryStatus[]
+  columnId?: string
   type?: string
   priority?: KanbanPriority
   tags?: string[]

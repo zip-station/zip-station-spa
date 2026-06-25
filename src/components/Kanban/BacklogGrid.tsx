@@ -31,6 +31,7 @@ import {
   useBulkUpdateStories,
   useReorderBacklogStory,
   useCreateKanbanCard,
+  useKanbanBoard,
 } from '@/hooks/useKanbanBoard'
 import { useKanbanStore } from '@/store/kanbanStore'
 import { backlogMidpoint } from '@/lib/backlog'
@@ -102,18 +103,27 @@ export function BacklogGrid({
   const sort = sortCol ? SORTABLE[sortCol.id] ?? 'backlog' : 'backlog'
   const dir: BacklogFilters['dir'] = sortCol ? (sortCol.desc ? 'desc' : 'asc') : 'asc'
 
+  // Column filter only applies within a single board, so load the scoped project's board for its
+  // columns (and accurate custom types). Columns are per-board — meaningless in "All projects".
+  const { data: scopedBoard } = useKanbanBoard(companyId, scope === 'all' ? null : scope)
+  const boardColumns = useMemo(
+    () => (scopedBoard ? [...scopedBoard.columns].sort((a, b) => a.position - b.position) : []),
+    [scopedBoard],
+  )
+
   const filters: BacklogFilters = useMemo(
     () => ({
       query: ui.query || undefined,
       projectIds: scope === 'all' ? undefined : [scope],
       status: statuses,
+      columnId: scope === 'all' ? undefined : ui.columnId || undefined,
       type: ui.type || undefined,
       priority: ui.priority || undefined,
       assignedTo: ui.assignedTo || undefined,
       sort,
       dir,
     }),
-    [ui.query, scope, statuses, ui.type, ui.priority, ui.assignedTo, sort, dir],
+    [ui.query, scope, statuses, ui.columnId, ui.type, ui.priority, ui.assignedTo, sort, dir],
   )
 
   const { data: stories, isLoading } = useBacklog(companyId, filters)
@@ -238,7 +248,7 @@ export function BacklogGrid({
         />
         <select
           value={scope}
-          onChange={(e) => setUi({ scope: e.target.value })}
+          onChange={(e) => setUi({ scope: e.target.value, columnId: '' })}
           className="h-9 rounded-md border border-input bg-background px-2 text-sm"
           title="Scope"
         >
@@ -247,6 +257,19 @@ export function BacklogGrid({
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
+        {scope !== 'all' && boardColumns.length > 0 && (
+          <select
+            value={ui.columnId}
+            onChange={(e) => setUi({ columnId: e.target.value })}
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            title="Column"
+          >
+            <option value="">All columns</option>
+            {boardColumns.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
         <select
           value={ui.type}
           onChange={(e) => setUi({ type: e.target.value })}

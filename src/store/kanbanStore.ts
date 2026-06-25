@@ -18,6 +18,8 @@ export interface BacklogUiState {
   scope: string
   statuses: KanbanStoryStatus[]
   query: string
+  /** Board column id to filter to (single-project scope only). '' = all columns. */
+  columnId: string
   type: string
   priority: KanbanPriority | ''
   assignedTo: string
@@ -29,6 +31,7 @@ export const defaultBacklogUi: BacklogUiState = {
   scope: '',
   statuses: ['Backlog', 'Committed'],
   query: '',
+  columnId: '',
   type: '',
   priority: '',
   assignedTo: '',
