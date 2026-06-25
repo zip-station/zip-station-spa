@@ -49,6 +49,34 @@ export type KanbanCardType = string
 export type KanbanPriority = 'Low' | 'Normal' | 'High' | 'Urgent'
 export type KanbanCommentType = 'User' | 'System'
 
+/**
+ * A story's lifecycle bucket, orthogonal to its board column. The board renders only
+ * `Committed`/`Resolved`; the backlog grid covers everything.
+ * - `Unreviewed`: auto-created from an external source (Discord), not yet triaged.
+ * - `Backlog`: reviewed and prioritized, not yet committed.
+ * - `Committed`: actively worked — shown on the board.
+ * - `Resolved`: done (reached the resolved column), still recent.
+ * - `Archived`: filed away (auto after N days, or manual). Reversible.
+ * - `Obsolete`: scrapped / won't-do.
+ */
+export type KanbanStoryStatus =
+  | 'Unreviewed'
+  | 'Backlog'
+  | 'Committed'
+  | 'Resolved'
+  | 'Archived'
+  | 'Obsolete'
+
+/** The order the status enum is serialized in on the backend (int values). */
+export const KANBAN_STATUS_ORDER: KanbanStoryStatus[] = [
+  'Unreviewed',
+  'Backlog',
+  'Committed',
+  'Resolved',
+  'Archived',
+  'Obsolete',
+]
+
 export interface KanbanColumnResponse {
   id: string
   name: string
@@ -83,6 +111,8 @@ export interface KanbanCardResponse {
   cardNumber: number
   columnId: string
   position: number
+  status: KanbanStoryStatus
+  backlogPosition: number
   title: string
   descriptionHtml?: string
   type: KanbanCardType
@@ -147,13 +177,53 @@ export interface KanbanStorySummaryResponse {
   id: string
   projectId: string
   projectName?: string
+  boardId: string
   cardNumber: number
   title: string
   type: KanbanCardType
   priority: KanbanPriority
   columnId: string
   columnName?: string
+  isResolved: boolean
   assignedToUserId?: string
+  status: KanbanStoryStatus
+  backlogPosition: number
+  tags: string[]
+  externalSources: KanbanCardExternalSourceResponse[]
+  updatedOnDateTime: number
+  createdOnDateTime: number
+}
+
+/** Filters for the cross-project backlog grid (`GET /companies/{id}/stories/backlog`). */
+export interface BacklogFilters {
+  query?: string
+  projectIds?: string[]
+  boardIds?: string[]
+  status?: KanbanStoryStatus[]
+  type?: string
+  priority?: KanbanPriority
+  tags?: string[]
+  assignedTo?: string
+  sort?: 'backlog' | 'priority' | 'updated' | 'created' | 'number' | 'title'
+  dir?: 'asc' | 'desc'
+  limit?: number
+  skip?: number
+}
+
+export interface BulkUpdateStoriesRequest {
+  cardIds: string[]
+  status?: KanbanStoryStatus
+  type?: KanbanCardType
+  priority?: KanbanPriority
+  assignedToUserId?: string
+  clearAssignee?: boolean
+  tags?: string[]
+}
+
+export interface BulkUpdateStoriesResponse {
+  updatedCount: number
+  skippedCardIds: string[]
+  updated: KanbanStorySummaryResponse[]
 }
 
 export interface CreateKanbanCardRequest {
@@ -165,6 +235,10 @@ export interface CreateKanbanCardRequest {
   tags?: string[]
   assignedToUserId?: string
   linkedTicketIds?: string[]
+  /** Lifecycle bucket. Omit to let the server choose (Committed with a column, else Backlog). */
+  status?: KanbanStoryStatus
+  /** Explicit backlog rank (add-to-top / add-to-bottom). Omit to append by creation time. */
+  backlogPosition?: number
 }
 
 export interface UpdateKanbanCardRequest {
@@ -177,6 +251,10 @@ export interface UpdateKanbanCardRequest {
   clearAssignee?: boolean
   columnId?: string
   position?: number
+  /** Explicit lifecycle transition (commit/obsolete/archive/resolve/backlog). Wins over column. */
+  status?: KanbanStoryStatus
+  /** Hand-ordering rank in the backlog grid (drag-to-prioritize). */
+  backlogPosition?: number
 }
 
 export interface UpdateKanbanColumnsRequest {

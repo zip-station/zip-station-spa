@@ -1,13 +1,18 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { buildBacklogQuery } from '@/lib/backlog'
 import type {
   KanbanBoardResponse,
   KanbanCardResponse,
   KanbanCardDetailResponse,
   KanbanCardCommentResponse,
+  KanbanStorySummaryResponse,
   CreateKanbanCardRequest,
   UpdateKanbanCardRequest,
   UpdateKanbanColumnsRequest,
+  BacklogFilters,
+  BulkUpdateStoriesRequest,
+  BulkUpdateStoriesResponse,
 } from '@/types/api'
 
 function boardPath(companyId: string, projectId: string) {
@@ -21,7 +26,6 @@ export interface CardFilters {
   type?: string
   tags?: string[]
   hasLinkedTickets?: boolean
-  includeArchived?: boolean
 }
 
 function buildCardQuery(filters: CardFilters): string {
@@ -32,7 +36,6 @@ function buildCardQuery(filters: CardFilters): string {
   if (filters.type) parts.push(`type=${encodeURIComponent(filters.type)}`)
   if (filters.tags?.length) filters.tags.forEach((t) => parts.push(`tags=${encodeURIComponent(t)}`))
   if (filters.hasLinkedTickets !== undefined) parts.push(`hasLinkedTickets=${filters.hasLinkedTickets}`)
-  if (filters.includeArchived) parts.push('includeArchived=true')
   return parts.length > 0 ? `?${parts.join('&')}` : ''
 }
 
@@ -73,6 +76,8 @@ export function useCreateKanbanCard(companyId: string | null, projectId: string 
       api.post<KanbanCardResponse>(`${boardPath(companyId!, projectId!)}/cards`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
+      // A new story shows up in the cross-project backlog grid too — keep it live.
+      qc.invalidateQueries({ queryKey: ['backlog', companyId] })
     },
   })
 }
@@ -88,6 +93,7 @@ export function useUpdateKanbanCard(companyId: string | null, projectId: string 
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
       qc.invalidateQueries({ queryKey: ['kanbanCardDetail', companyId, projectId] })
+      qc.invalidateQueries({ queryKey: ['backlog', companyId] })
       void params
     },
   })
@@ -100,6 +106,7 @@ export function useDeleteKanbanCard(companyId: string | null, projectId: string 
       api.delete<void>(`${boardPath(companyId!, projectId!)}/cards/${cardId}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
+      qc.invalidateQueries({ queryKey: ['backlog', companyId] })
     },
   })
 }
@@ -226,6 +233,50 @@ export function useRemoveExternalSource(companyId: string | null, projectId: str
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['kanbanCards', companyId, projectId] })
       qc.invalidateQueries({ queryKey: ['kanbanCardDetail', companyId, projectId] })
+    },
+  })
+}
+
+// ---- Cross-project backlog grid ----
+
+/** Cross-project backlog list. Scope/filter/sort all live in `filters`. */
+export function useBacklog(companyId: string | null, filters: BacklogFilters, enabled = true) {
+  return useQuery({
+    queryKey: ['backlog', companyId, filters],
+    queryFn: () =>
+      api.get<KanbanStorySummaryResponse[]>(
+        `/api/v1/companies/${companyId}/stories/backlog${buildBacklogQuery(filters)}`,
+      ),
+    enabled: !!companyId && enabled,
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Bulk edit / transition a selection of stories (may span projects). */
+export function useBulkUpdateStories(companyId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: BulkUpdateStoriesRequest) =>
+      api.post<BulkUpdateStoriesResponse>(`/api/v1/companies/${companyId}/stories/bulk`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['backlog', companyId] })
+      // A committed/obsoleted/archived story changes what the per-project board shows.
+      qc.invalidateQueries({ queryKey: ['kanbanCards'] })
+    },
+  })
+}
+
+/** Drag-to-prioritize a single backlog story (single-board scope) via the board PATCH route. */
+export function useReorderBacklogStory(companyId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { projectId: string; cardId: string; backlogPosition: number }) =>
+      api.patch<KanbanCardResponse>(
+        `${boardPath(companyId!, params.projectId)}/cards/${params.cardId}`,
+        { backlogPosition: params.backlogPosition },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['backlog', companyId] })
     },
   })
 }

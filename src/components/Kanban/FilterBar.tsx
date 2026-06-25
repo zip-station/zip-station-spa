@@ -10,7 +10,6 @@ export interface KanbanFilters {
   type: KanbanCardType | ''
   tags: string[]
   hasLinkedTickets: 'any' | 'yes' | 'no'
-  includeArchived: boolean
 }
 
 interface FilterBarProps {
@@ -30,11 +29,10 @@ export function FilterBar({ filters, onChange, members, availableTags, customCar
     (filters.assignedTo ? 1 : 0) +
     (filters.type ? 1 : 0) +
     (filters.tags.length > 0 ? 1 : 0) +
-    (filters.hasLinkedTickets !== 'any' ? 1 : 0) +
-    (filters.includeArchived ? 1 : 0)
+    (filters.hasLinkedTickets !== 'any' ? 1 : 0)
 
   const reset = () =>
-    onChange({ query: '', assignedTo: '', type: '', tags: [], hasLinkedTickets: 'any', includeArchived: false })
+    onChange({ query: '', assignedTo: '', type: '', tags: [], hasLinkedTickets: 'any' })
 
   return (
     <>
@@ -83,14 +81,6 @@ export function FilterBar({ filters, onChange, members, availableTags, customCar
           <option value="yes">Has linked tickets</option>
           <option value="no">No linked tickets</option>
         </select>
-        <label className="flex items-center gap-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={filters.includeArchived}
-            onChange={(e) => onChange({ ...filters, includeArchived: e.target.checked })}
-          />
-          Show archived
-        </label>
         {availableTags.length > 0 && (
           <TagPicker
             selected={filters.tags}
@@ -179,14 +169,6 @@ export function FilterBar({ filters, onChange, members, availableTags, customCar
                   <option value="no">No linked tickets</option>
                 </select>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={filters.includeArchived}
-                  onChange={(e) => onChange({ ...filters, includeArchived: e.target.checked })}
-                />
-                Show archived stories
-              </label>
               {availableTags.length > 0 && (
                 <div>
                   <label className="mb-1 block text-sm font-medium">Tags</label>

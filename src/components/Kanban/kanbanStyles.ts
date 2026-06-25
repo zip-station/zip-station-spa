@@ -5,7 +5,27 @@ import {
   type KanbanCardType,
   type KanbanCardTypeResponse,
   type KanbanPriority,
+  type KanbanStoryStatus,
 } from '@/types/api'
+
+/** Badge styling + label per lifecycle status, used by the backlog grid and status pickers. */
+export const statusColors: Record<KanbanStoryStatus, string> = {
+  Unreviewed: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  Backlog: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  Committed: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400',
+  Resolved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  Archived: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
+  Obsolete: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+}
+
+export const statusLabels: Record<KanbanStoryStatus, string> = {
+  Unreviewed: 'Unreviewed',
+  Backlog: 'Backlog',
+  Committed: 'Committed',
+  Resolved: 'Resolved',
+  Archived: 'Archived',
+  Obsolete: 'Obsolete',
+}
 
 export const cardTypeColors: Record<BuiltInCardType, string> = {
   Feature: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',

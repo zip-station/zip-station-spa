@@ -34,6 +34,7 @@ import type {
 } from '@/types/api'
 import type { ImageUploadResult } from '@/components/ui/RichTextEditor'
 import { getCardTypeBadge, cardTypeOptions, priorityColors, formatStoryId } from '@/components/Kanban/kanbanStyles'
+import { useKanbanStore } from '@/store/kanbanStore'
 import { LinkTicketPicker } from '@/components/Kanban/LinkTicketPicker'
 import { LinkStoryPicker } from '@/components/Kanban/LinkStoryPicker'
 import { ExternalSourcesPicker } from '@/components/Kanban/ExternalSourcesPicker'
@@ -74,6 +75,8 @@ export function KanbanCardDetailPage() {
   const navigate = useNavigate()
   const cardNumber = Number(params.storyNumber)
   const fromTicket = search.fromTicket
+  const cameFromBacklog = useKanbanStore((s) => s.kanbanTab) === 'backlog'
+  const backLabel = cameFromBacklog ? 'Back to backlog' : 'Back to board'
 
   const { companyId } = useCurrentUser()
   const { selectedProjectId } = useSelectedProject()
@@ -165,7 +168,7 @@ export function KanbanCardDetailPage() {
           </Link>
         ) : (
           <Link to="/kanban" className="mt-4 inline-block text-sm text-primary hover:underline">
-            Back to board
+            {backLabel}
           </Link>
         )}
       </div>
@@ -231,7 +234,7 @@ export function KanbanCardDetailPage() {
         ) : (
           <Link to="/kanban" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
-            Back to board
+            {backLabel}
           </Link>
         )}
         <span className="font-mono text-sm text-muted-foreground">{formatStoryId(card.cardNumber)}</span>

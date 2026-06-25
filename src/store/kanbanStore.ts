@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { KanbanFilters } from '@/components/Kanban/FilterBar'
+import type { KanbanPriority, KanbanStoryStatus } from '@/types/api'
 
 export const defaultKanbanFilters: KanbanFilters = {
   query: '',
@@ -8,7 +9,31 @@ export const defaultKanbanFilters: KanbanFilters = {
   type: '',
   tags: [],
   hasLinkedTickets: 'any',
-  includeArchived: false,
+}
+
+/** Backlog grid view state — kept in memory so opening a story and coming back restores the
+ *  scope, filters, sort and scroll position the user left. `scope` of '' means "the current
+ *  project" (resolved by the grid on mount). */
+export interface BacklogUiState {
+  scope: string
+  statuses: KanbanStoryStatus[]
+  query: string
+  type: string
+  priority: KanbanPriority | ''
+  assignedTo: string
+  sorting: { id: string; desc: boolean }[]
+  scrollTop: number
+}
+
+export const defaultBacklogUi: BacklogUiState = {
+  scope: '',
+  statuses: ['Backlog', 'Committed'],
+  query: '',
+  type: '',
+  priority: '',
+  assignedTo: '',
+  sorting: [],
+  scrollTop: 0,
 }
 
 interface KanbanStore {
@@ -20,6 +45,13 @@ interface KanbanStore {
   // but reset on reload — see partialize below, which keeps them out of storage.
   filters: KanbanFilters
   setFilters: (filters: KanbanFilters) => void
+  // Which tab the kanban page is on (Board vs Backlog). Kept so "back to board" from a story
+  // returns to the tab the user came from.
+  kanbanTab: 'board' | 'backlog'
+  setKanbanTab: (tab: 'board' | 'backlog') => void
+  // Backlog grid view state (scope/filters/sort/scroll), preserved across navigation.
+  backlogUi: BacklogUiState
+  setBacklogUi: (patch: Partial<BacklogUiState>) => void
 }
 
 export const useKanbanStore = create<KanbanStore>()(
@@ -35,11 +67,15 @@ export const useKanbanStore = create<KanbanStore>()(
       isColumnCollapsed: (columnId) => get().collapsedColumnIds.includes(columnId),
       filters: defaultKanbanFilters,
       setFilters: (filters) => set({ filters }),
+      kanbanTab: 'board',
+      setKanbanTab: (kanbanTab) => set({ kanbanTab }),
+      backlogUi: defaultBacklogUi,
+      setBacklogUi: (patch) => set((state) => ({ backlogUi: { ...state.backlogUi, ...patch } })),
     }),
     {
       name: 'zipstation-kanban',
-      // Persist only column-collapse state. Filters are intentionally left in
-      // memory so a page refresh starts with a clean board.
+      // Persist only column-collapse state. Filters / tab / backlog view state are intentionally
+      // left in memory so a page refresh starts clean, but survive in-app navigation.
       partialize: (state) => ({ collapsedColumnIds: state.collapsedColumnIds }),
     }
   )

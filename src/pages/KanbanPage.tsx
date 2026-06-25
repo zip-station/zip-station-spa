@@ -14,7 +14,7 @@ import {
   type CollisionDetection,
 } from '@dnd-kit/core'
 import { useQuery } from '@tanstack/react-query'
-import { Trello, Settings as SettingsIcon, Loader2 } from 'lucide-react'
+import { Trello, Settings as SettingsIcon, Loader2, Columns3, ListTodo } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useSelectedProject } from '@/hooks/useSelectedProject'
@@ -34,6 +34,7 @@ import { KanbanCardTile } from '@/components/Kanban/KanbanCardTile'
 import { ColumnSettingsModal } from '@/components/Kanban/ColumnSettingsModal'
 import { CreateCardModal } from '@/components/Kanban/CreateCardModal'
 import { FilterBar } from '@/components/Kanban/FilterBar'
+import { BacklogGrid } from '@/components/Kanban/BacklogGrid'
 
 const POSITION_STEP = 1000
 
@@ -45,6 +46,8 @@ export function KanbanPage() {
   const toggleColumnCollapsed = useKanbanStore((s) => s.toggleColumnCollapsed)
   const filters = useKanbanStore((s) => s.filters)
   const setFilters = useKanbanStore((s) => s.setFilters)
+  const tab = useKanbanStore((s) => s.kanbanTab)
+  const setTab = useKanbanStore((s) => s.setKanbanTab)
 
   const canEdit = hasPermission('Kanban.Edit')
 
@@ -61,7 +64,6 @@ export function KanbanPage() {
     tags: filters.tags.length > 0 ? filters.tags : undefined,
     hasLinkedTickets:
       filters.hasLinkedTickets === 'yes' ? true : filters.hasLinkedTickets === 'no' ? false : undefined,
-    includeArchived: filters.includeArchived,
   })
 
   const { data: members } = useQuery({
@@ -224,7 +226,7 @@ export function KanbanPage() {
             Plan features, bugs, improvements, and tech debt. Drag stories between columns.
           </p>
         </div>
-        {canEdit && (
+        {canEdit && tab === 'board' && (
           <Button
             variant="outline"
             size="sm"
@@ -237,55 +239,90 @@ export function KanbanPage() {
         )}
       </div>
 
-      <div className="mb-3">
-        <FilterBar
-          filters={filters}
-          onChange={setFilters}
-          members={members ?? []}
-          availableTags={availableTags}
-          customCardTypes={board.customCardTypes}
-        />
+      {/* Board / Backlog tabs */}
+      <div className="mb-3 inline-flex rounded-md border p-0.5 text-sm">
+        <button
+          onClick={() => setTab('board')}
+          className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-medium transition ${
+            tab === 'board' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Columns3 className="h-4 w-4" />
+          Board
+        </button>
+        <button
+          onClick={() => setTab('backlog')}
+          className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-medium transition ${
+            tab === 'backlog' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <ListTodo className="h-4 w-4" />
+          Backlog
+        </button>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={collisionDetection}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex flex-1 gap-3 overflow-x-auto snap-x snap-mandatory pb-3">
-          {board.columns
-            .slice()
-            .sort((a, b) => a.position - b.position)
-            .map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                cards={cardsByColumn[column.id] ?? []}
-                userNamesById={userNamesById}
-                isResolvedColumn={column.id === board.resolvedColumnId}
-                collapsed={collapsedColumnIds.includes(column.id)}
-                scrollScope={selectedProjectId}
-                customCardTypes={board.customCardTypes}
-                onAddCard={(id) => canEdit && setCreateForColumnId(id)}
-                onToggleCollapse={toggleColumnCollapsed}
-              />
-            ))}
-        </div>
-
-        <DragOverlay>
-          {activeCard ? (
-            <KanbanCardTile
-              card={activeCard}
-              assigneeName={
-                activeCard.assignedToUserId ? userNamesById.get(activeCard.assignedToUserId) : undefined
-              }
-              isDragging
+      {tab === 'backlog' ? (
+        <BacklogGrid
+          companyId={companyId!}
+          projects={projects}
+          currentProjectId={selectedProjectId}
+          members={members ?? []}
+          customCardTypes={board.customCardTypes}
+          canEdit={canEdit}
+        />
+      ) : (
+        <>
+          <div className="mb-3">
+            <FilterBar
+              filters={filters}
+              onChange={setFilters}
+              members={members ?? []}
+              availableTags={availableTags}
               customCardTypes={board.customCardTypes}
             />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          </div>
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={collisionDetection}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex flex-1 gap-3 overflow-x-auto snap-x snap-mandatory pb-3">
+              {board.columns
+                .slice()
+                .sort((a, b) => a.position - b.position)
+                .map((column) => (
+                  <KanbanColumn
+                    key={column.id}
+                    column={column}
+                    cards={cardsByColumn[column.id] ?? []}
+                    userNamesById={userNamesById}
+                    isResolvedColumn={column.id === board.resolvedColumnId}
+                    collapsed={collapsedColumnIds.includes(column.id)}
+                    scrollScope={selectedProjectId}
+                    customCardTypes={board.customCardTypes}
+                    onAddCard={(id) => canEdit && setCreateForColumnId(id)}
+                    onToggleCollapse={toggleColumnCollapsed}
+                  />
+                ))}
+            </div>
+
+            <DragOverlay>
+              {activeCard ? (
+                <KanbanCardTile
+                  card={activeCard}
+                  assigneeName={
+                    activeCard.assignedToUserId ? userNamesById.get(activeCard.assignedToUserId) : undefined
+                  }
+                  isDragging
+                  customCardTypes={board.customCardTypes}
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </>
+      )}
 
       <ColumnSettingsModal
         open={columnsOpen}
