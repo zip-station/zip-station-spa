@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useMemo, useState, useRef, useEffect, useLayoutEffect, createContext, useContext } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   useReactTable,
@@ -65,6 +65,27 @@ const SORTABLE: Record<string, BacklogFilters['sort']> = {
   title: 'title',
   priority: 'priority',
   updated: 'updated',
+}
+
+// dnd-kit sortable handle props, threaded from the <tr> (which owns useSortable) down to the grip
+// cell that react-table renders, so only the grip — not the whole row — starts a drag.
+type SortableHandle = Pick<ReturnType<typeof useSortable>, 'attributes' | 'listeners'>
+const RowDragContext = createContext<SortableHandle | null>(null)
+
+function DragHandle() {
+  const handle = useContext(RowDragContext)
+  if (!handle) return null
+  return (
+    <button
+      type="button"
+      aria-label="Drag to reorder"
+      className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+      {...handle.attributes}
+      {...handle.listeners}
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  )
 }
 
 interface BacklogGridProps {
@@ -496,15 +517,20 @@ function BacklogRow({
   dragEnabled: boolean
   children: React.ReactNode
 }) {
-  const { setNodeRef, transform, transition, isDragging } = useSortable({ id: rowId, disabled: !dragEnabled })
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({
+    id: rowId,
+    disabled: !dragEnabled,
+  })
   return (
-    <tr
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`border-b last:border-0 hover:bg-accent/40 ${isDragging ? 'opacity-50' : ''}`}
-    >
-      {children}
-    </tr>
+    <RowDragContext.Provider value={{ attributes, listeners }}>
+      <tr
+        ref={setNodeRef}
+        style={{ transform: CSS.Transform.toString(transform), transition }}
+        className={`border-b last:border-0 hover:bg-accent/40 ${isDragging ? 'relative z-10 bg-card opacity-80 shadow' : ''}`}
+      >
+        {children}
+      </tr>
+    </RowDragContext.Provider>
   )
 }
 
@@ -555,7 +581,7 @@ function buildColumns(deps: ColumnDeps) {
       col.display({
         id: 'drag',
         header: () => null,
-        cell: () => <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />,
+        cell: () => <DragHandle />,
       }),
     )
   }
