@@ -29,7 +29,7 @@ export interface BacklogUiState {
 
 export const defaultBacklogUi: BacklogUiState = {
   scope: '',
-  statuses: ['Backlog', 'Committed'],
+  statuses: ['Unreviewed', 'Backlog', 'Committed'],
   query: '',
   columnId: '',
   type: '',

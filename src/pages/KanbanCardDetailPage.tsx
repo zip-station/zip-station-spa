@@ -367,7 +367,7 @@ export function KanbanCardDetailPage() {
                 {canEdit && (
                   card.status === 'Obsolete' || card.status === 'Archived' ? (
                     <Button variant="outline" size="sm" onClick={() => saveField({ status: 'Backlog' })}>
-                      Restore to backlog
+                      Restore to Accepted
                     </Button>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => saveField({ status: 'Obsolete' })}>
@@ -378,22 +378,26 @@ export function KanbanCardDetailPage() {
               </div>
             </Field>
 
-            <Field label="Column">
-              <select
-                value={columnId}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setColumnId(v)
-                  saveField({ columnId: v })
-                }}
-                disabled={!canEdit}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              >
-                {board?.columns.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </Field>
+            {/* Column only applies to on-board work (Committed/Resolved). Off-board cards
+                (Unreviewed/Accepted/Archived/Obsolete) don't belong to a column. */}
+            {(card.status === 'Committed' || card.status === 'Resolved') && (
+              <Field label="Column">
+                <select
+                  value={columnId}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setColumnId(v)
+                    saveField({ columnId: v })
+                  }}
+                  disabled={!canEdit}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  {board?.columns.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             <Field label="Type">
               <select
