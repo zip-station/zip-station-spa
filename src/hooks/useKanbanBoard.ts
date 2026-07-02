@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { buildBacklogQuery } from '@/lib/backlog'
 import type {
@@ -239,14 +239,23 @@ export function useRemoveExternalSource(companyId: string | null, projectId: str
 
 // ---- Cross-project backlog grid ----
 
-/** Cross-project backlog list. Scope/filter/sort all live in `filters`. */
+/** Rows fetched per page. The server caps a single request at BacklogMaxLimit (500); we page in
+ *  smaller chunks and load more on scroll so an unbounded backlog (e.g. Discord intake) all loads. */
+export const BACKLOG_PAGE_SIZE = 200
+
+/** Cross-project backlog list, paginated via infinite scroll. Scope/filter/sort live in `filters`;
+ *  `skip`/`limit` are managed here per page. Flatten `data.pages` for the full loaded set. */
 export function useBacklog(companyId: string | null, filters: BacklogFilters, enabled = true) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['backlog', companyId, filters],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       api.get<KanbanStorySummaryResponse[]>(
-        `/api/v1/companies/${companyId}/stories/backlog${buildBacklogQuery(filters)}`,
+        `/api/v1/companies/${companyId}/stories/backlog${buildBacklogQuery({ ...filters, skip: pageParam, limit: BACKLOG_PAGE_SIZE })}`,
       ),
+    initialPageParam: 0,
+    // A full page means there may be more; a short page is the last one.
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === BACKLOG_PAGE_SIZE ? allPages.length * BACKLOG_PAGE_SIZE : undefined,
     enabled: !!companyId && enabled,
     placeholderData: keepPreviousData,
   })

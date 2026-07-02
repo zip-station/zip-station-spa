@@ -147,7 +147,8 @@ export function BacklogGrid({
     [ui.query, scope, statuses, ui.columnId, ui.type, ui.priority, ui.assignedTo, sort, dir],
   )
 
-  const { data: stories, isLoading } = useBacklog(companyId, filters)
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useBacklog(companyId, filters)
+  const stories = useMemo(() => data?.pages.flat() ?? [], [data])
   const bulk = useBulkUpdateStories(companyId)
   const reorder = useReorderBacklogStory(companyId)
   // Create is per-project, so it targets the single scoped project (disabled in "All projects").
@@ -427,7 +428,15 @@ export function BacklogGrid({
       {/* Grid */}
       <div
         ref={scrollRef}
-        onScroll={(e) => { scrollTopRef.current = e.currentTarget.scrollTop }}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          scrollTopRef.current = el.scrollTop
+          // Load the next page as the user nears the bottom of the list.
+          if (hasNextPage && !isFetchingNextPage &&
+              el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
+            fetchNextPage()
+          }
+        }}
         className="flex-1 overflow-auto rounded-md border"
       >
         {isLoading ? (
@@ -487,6 +496,11 @@ export function BacklogGrid({
               </tbody>
             </table>
           </DndContext>
+        )}
+        {isFetchingNextPage && (
+          <div className="flex items-center justify-center py-3 border-t">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
         )}
       </div>
 
