@@ -56,7 +56,7 @@ import {
   statusLabels,
 } from './kanbanStyles'
 
-const DEFAULT_STATUSES: KanbanStoryStatus[] = ['Backlog', 'Committed']
+const DEFAULT_STATUSES: KanbanStoryStatus[] = ['Unreviewed', 'Backlog', 'Committed']
 const PRIORITIES: KanbanPriority[] = ['Low', 'Normal', 'High', 'Urgent']
 
 // Map a react-table column id to the backlog endpoint's sort key (those it supports server-side).
@@ -405,17 +405,17 @@ export function BacklogGrid({
             ))}
           </select>
           <span className="text-muted-foreground">·</span>
-          <Button size="sm" variant="outline" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Committed' })}>
-            Commit
+          <Button size="sm" variant="outline" title="Pull onto the kanban board to start work" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Committed' })}>
+            Commit to board
           </Button>
-          <Button size="sm" variant="outline" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Backlog' })}>
-            To backlog
+          <Button size="sm" variant="outline" title="Accept into the prioritized backlog (not started)" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Backlog' })}>
+            Accept
           </Button>
-          <Button size="sm" variant="outline" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Archived' })}>
+          <Button size="sm" variant="outline" title="File away as handled" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Archived' })}>
             Archive
           </Button>
-          <Button size="sm" variant="outline" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Obsolete' })}>
-            Obsolete
+          <Button size="sm" variant="outline" title="Scrapped / won't do" onClick={() => applyBulk({ cardIds: selectedIds, status: 'Obsolete' })}>
+            Mark obsolete
           </Button>
           {(bulk.isPending || reorder.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
           <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setRowSelection({})}>

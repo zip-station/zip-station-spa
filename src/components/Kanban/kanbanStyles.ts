@@ -20,7 +20,9 @@ export const statusColors: Record<KanbanStoryStatus, string> = {
 
 export const statusLabels: Record<KanbanStoryStatus, string> = {
   Unreviewed: 'Unreviewed',
-  Backlog: 'Backlog',
+  // Display label only — the enum/BSON value stays `Backlog`. "Accepted" reads as the triage gate
+  // (reviewed & kept) and avoids colliding with the "Backlog" page name.
+  Backlog: 'Accepted',
   Committed: 'Committed',
   Resolved: 'Resolved',
   Archived: 'Archived',
